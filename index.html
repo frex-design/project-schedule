@@ -92,6 +92,16 @@ input[type=month]{width:148px;}input[type=number]{width:70px;}
 .no-biz-icon{font-size:40px;opacity:0.4;}
 .no-biz-msg{font-size:14px;font-weight:600;}
 .no-biz-sub{font-size:12px;}
+/* ウェルカム画面 */
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:60vh;gap:20px;text-align:center;padding:40px 20px;}
+.welcome-logo{font-size:13px;font-weight:600;color:var(--blue-600);letter-spacing:0.08em;opacity:0.7;}
+.welcome-title{font-size:28px;font-weight:700;color:var(--text);letter-spacing:-0.01em;}
+.welcome-title span{color:var(--blue-800);}
+.welcome-sub{font-size:13px;color:var(--text2);line-height:1.8;}
+.welcome-arrow{font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px;
+  background:var(--surface2);border-radius:20px;padding:6px 14px;}
+.welcome-biz-hint{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:4px;}
 
 /* ===== サマリー ===== */
 .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;padding:12px 20px 4px;}
@@ -787,14 +797,29 @@ function renderBizBar(){
     wrap.appendChild(btn);
   });
 
-  // 業務なし表示
+  // 業務なし or 未選択時の表示
   const sc = document.getElementById('schedule-content');
   if(!currentBiz){
     document.getElementById('ctrl-bar').style.display='none';
     document.getElementById('summary-wrap').style.display='none';
-    sc.innerHTML='<div class="no-biz"><div class="no-biz-icon">📋</div>'
-      +'<div class="no-biz-msg">業務が登録されていません</div>'
-      +'<div class="no-biz-sub">上の「業務追加」から業務名を入力して追加してください</div></div>';
+    if(bizList.length===0){
+      // 業務が1件もない → 業務追加を促す
+      sc.innerHTML=`<div class="welcome">
+        <div class="welcome-logo">FRe:x Design inc.</div>
+        <div class="welcome-title">ようこそ<br><span>点検実施工程管理システム</span>へ</div>
+        <div class="welcome-sub">まず「＋ 業務追加」ボタンから業務名を登録してください。</div>
+        <div class="welcome-arrow">↑ 上の「＋ 業務追加」をクリック</div>
+      </div>`;
+    } else {
+      // 業務はあるが未選択 → 業務タブをクリック促す
+      const bizBtns = bizList.map(b=>`<button class="biz-tab" onclick="selectBiz('${b.id}')" style="font-size:13px;padding:8px 20px">${b.name}</button>`).join('');
+      sc.innerHTML=`<div class="welcome">
+        <div class="welcome-logo">FRe:x Design inc.</div>
+        <div class="welcome-title">ようこそ<br><span>点検実施工程管理システム</span>へ</div>
+        <div class="welcome-sub">業務を選択してスケジュール表を表示します。</div>
+        <div class="welcome-biz-hint">${bizBtns}</div>
+      </div>`;
+    }
   }
 }
 
@@ -1926,8 +1951,7 @@ async function loadFromDb(){
       methods = methodData[0].methods;
     }
 
-    renderLegend();renderBizBar();
-    if(bizList.length > 0) selectBiz(bizList[0].id);
+    renderLegend();renderBizBar(); // 業務は自動選択しない（ウェルカム画面を表示）
   } catch(e){
     console.error('loadFromDb error:', e);
     renderLegend();renderBizBar();
