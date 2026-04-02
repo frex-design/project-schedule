@@ -436,7 +436,7 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
       <div class="guide-section">
         <div class="guide-heading">🗂 CSV読み込みの列自動判定キーワード</div>
         <div class="guide-table">
-          <div class="guide-row"><div class="guide-key">橋梁名</div><div class="guide-val">橋梁名称・橋梁名・橋名</div></div>
+          <div class="guide-row"><div class="guide-key">橋梁名/施設名</div><div class="guide-val">橋梁名称・橋梁名・橋名・名称・施設名</div></div>
           <div class="guide-row"><div class="guide-key">路線名</div><div class="guide-val">路線名称・路線名・路線</div></div>
           <div class="guide-row"><div class="guide-key">橋長/施設延長</div><div class="guide-val">橋長・施設延長・延長・トンネル長・施設長</div></div>
           <div class="guide-row"><div class="guide-key">幅員</div><div class="guide-val">幅員</div></div>
@@ -595,7 +595,7 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
       <table class="gantt-table" id="gantt-table">
         <thead id="g-head-wrap">
           <tr>
-            <th class="gantt-th-name">業務 / 橋梁名</th>
+            <th class="gantt-th-name">業務 / 橋梁名/施設名</th>
             <th class="gantt-th-calendar" id="g-head"></th>
           </tr>
         </thead>
@@ -623,7 +623,7 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
       </div>
       <div class="frow"><div class="flbl">日付</div><input type="date" id="m-date"></div>
       <div class="frow">
-        <div class="flbl">橋梁名</div>
+        <div class="flbl">橋梁名/施設名</div>
         <select id="m-bridge" onchange="onBSel()"><option value="">— 橋梁を選択してください —</option></select>
         <div class="binfo" id="binfo"></div>
       </div>
@@ -947,7 +947,7 @@ function parseCSV(txt){
 
   // 各項目のキーワード候補（部分一致で探す）
   const KEYS={
-    name:   ['橋梁名称','橋梁名','橋名'],
+    name:   ['橋梁名称','橋梁名','橋名','名称','施設名'],
     route:  ['路線名称','路線名','路線'],
     code:   ['橋梁コード','コード','管理番号'],
     length: ['橋長','施設延長','延長','トンネル長','施設長'],
@@ -973,7 +973,7 @@ function parseCSV(txt){
 
   // 橋梁名か路線名の少なくとも一方が見つからなければエラー
   if(cols.name<0 && cols.route<0){
-    throw new Error('ヘッダー行に「橋梁名」または「路線名」が見つかりません。\n\nCSVの1行目（ヘッダー）を確認してください。\n検出されたヘッダー: '+header.join(' / '));
+    throw new Error('ヘッダー行に「橋梁名/施設名」または「路線名」が見つかりません。\n\nCSVの1行目（ヘッダー）を確認してください。\n検出されたヘッダー: '+header.join(' / '));
   }
 
   const get=(c,row)=>c>=0&&c<row.length?row[c].trim():'';
@@ -1383,7 +1383,7 @@ function renderSchedule(){
   if(!yms.length){sc.innerHTML='';return;}
 
   const csvNote='<p style="font-size:10px;color:var(--text3);margin-bottom:6px;padding:0 2px">'
-    +'※ 路線名・橋長/施設延長・幅員・径間数はCSVより自動表示</p>';
+    +'※ 橋梁名/施設名・路線名・橋長/施設延長・幅員・径間数はCSVより自動表示</p>';
 
   // 月ごとにテーブルを生成して縦に連結
   let html='<div class="pad">'+csvNote;
@@ -1399,7 +1399,7 @@ function renderSchedule(){
       +'<thead><tr>'
       +'<th style="width:44px">日付</th>'
       +'<th style="width:28px">曜</th>'
-      +'<th style="width:140px">橋梁名</th>'
+      +'<th style="width:140px">橋梁名/施設名</th>'
       +'<th style="width:108px">路線名</th>'
       +'<th style="width:52px">橋長/<br>施設延長</th>'
       +'<th style="width:46px">幅員</th>'
