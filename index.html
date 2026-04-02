@@ -351,6 +351,40 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
   @page{margin:15mm 12mm 15mm 12mm;size:A3 landscape;}
 }
 
+/* ========== スマホ対応 ========== */
+@media (max-width:768px){
+  /* ヘッダー */
+  .app-header{height:auto;flex-wrap:wrap;padding:8px 12px;gap:6px;}
+  .logo{font-size:12px;}
+  .logo span{display:none;}
+  /* スマホ非表示：編集系ボタン・バーチャートタブ・コントロールバー */
+  .sp-hide{display:none!important;}
+  /* 業務バー */
+  .biz-bar{padding:6px 12px;gap:6px;top:auto;position:relative;}
+  .biz-add-btn{display:none!important;}
+  /* タブ：スケジュールのみ表示 */
+  .tab-bar{display:none!important;}
+  /* コントロールバー */
+  #ctrl-bar{position:relative;top:auto;padding:8px 12px;flex-wrap:wrap;gap:8px;}
+  /* スケジュール表 */
+  .pad{padding:0 4px 12px;}
+  .month-heading{font-size:12px;}
+  .tbl-wrap{border-radius:0;overflow-x:auto;}
+  table{font-size:11px;min-width:600px;}
+  thead th{font-size:9px;padding:5px 4px;}
+  tbody td{padding:4px 4px;font-size:11px;}
+  .dc{font-size:11px;}
+  .wc{font-size:10px;}
+  /* 追加ボタン非表示 */
+  .add-btn{display:none!important;}
+  /* サマリー */
+  .summary-grid{grid-template-columns:repeat(3,1fr);gap:6px;}
+  .sum-card{padding:8px;}
+  /* モーダル：スマホ全画面 */
+  .modal{max-width:100%!important;margin:0;border-radius:0;max-height:100vh;}
+  .modal-overlay{padding:0;align-items:flex-end;}
+}
+
 /* 操作ガイド */
 .guide-section{margin-bottom:22px;}
 .guide-heading{font-size:12px;font-weight:800;color:var(--blue-800);padding:5px 0 7px;
@@ -370,9 +404,9 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
   <div class="logo">点検実施工程表管理システム<span>　｜　FRe:x Design inc.</span></div>
   <div style="flex:1"></div>
   <div id="db-status" style="font-size:11px;padding:3px 10px;border-radius:12px;background:var(--surface2);color:var(--text3);cursor:pointer;" onclick="openDbModal()">⚙ DB未接続</div>
-  <button class="btn btn-sm" onclick="openGuide()">？ 操作ガイド</button>
-  <button class="btn btn-sm" onclick="toggleMM()">点検方法管理</button>
-  <button class="btn btn-sm btn-success" onclick="printSchedule()">🖨 印刷</button>
+  <button class="btn btn-sm sp-hide" onclick="openGuide()">？ 操作ガイド</button>
+  <button class="btn btn-sm sp-hide" onclick="toggleMM()">点検方法管理</button>
+  <button class="btn btn-sm btn-success sp-hide" onclick="printSchedule()">🖨 印刷</button>
 </header>
 
 <!-- 操作ガイドモーダル -->
@@ -441,6 +475,25 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
           <div class="guide-row"><div class="guide-key">橋長/施設延長</div><div class="guide-val">橋長・施設延長・延長・トンネル長・施設長</div></div>
           <div class="guide-row"><div class="guide-key">幅員</div><div class="guide-val">幅員</div></div>
           <div class="guide-row"><div class="guide-key">径間数</div><div class="guide-val">径間数・径間</div></div>
+        </div>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-heading">📱 スマートフォンでの閲覧</div>
+        <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;padding:4px 0;">
+          <div style="flex-shrink:0;text-align:center;">
+            <canvas id="guide-qr" style="border-radius:8px;border:1px solid var(--border2);display:block;"></canvas>
+            <div style="font-size:10px;color:var(--text3);margin-top:6px;">QRコードを読み取る</div>
+          </div>
+          <div style="flex:1;min-width:200px;">
+            <div class="guide-table">
+              <div class="guide-row"><div class="guide-key">対応端末</div><div class="guide-val">iPhone / Android（ブラウザで開くだけ、インストール不要）</div></div>
+              <div class="guide-row"><div class="guide-key">スマホでできること</div><div class="guide-val">月間スケジュール表の閲覧・業務の切り替え・年度切り替え</div></div>
+              <div class="guide-row"><div class="guide-key">スマホではできないこと</div><div class="guide-val">点検の追加・編集・CSV読み込み・印刷・バーチャート工程表</div></div>
+              <div class="guide-row"><div class="guide-key">アクセス方法</div><div class="guide-val">左のQRコードをカメラで読み取るか、URLを直接入力してください</div></div>
+            </div>
+            <div id="guide-qr-url" style="margin-top:10px;font-size:10px;color:var(--text3);word-break:break-all;background:var(--surface2);border-radius:6px;padding:6px 8px;"></div>
+          </div>
         </div>
       </div>
 
@@ -534,7 +587,7 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
 
   <div class="ctrl-group">
     <div class="ctrl-label">橋梁CSVを読み込む（この業務に登録）※CSV自動判定</div>
-    <label class="csv-label" for="csv-input">
+    <label class="csv-label sp-hide" for="csv-input">
       <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13h12M8 2v8m0 0-3-3m3 3 3-3"/></svg>
       CSVファイルを選択
     </label>
@@ -542,7 +595,7 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
   </div>
   <span class="csv-status" id="csv-status"></span>
   <div style="flex:1"></div>
-  <button class="btn btn-primary" onclick="openAddModal(null,null)">＋ 点検を追加</button>
+  <button class="btn btn-primary sp-hide" onclick="openAddModal(null,null)">＋ 点検を追加</button>
 </div>
 
 <!-- 点検方法管理 -->
@@ -861,7 +914,25 @@ function selectBiz(id){
   document.getElementById('ctrl-bar').style.display = id ? '' : 'none';
   document.getElementById('summary-wrap').style.display = id ? '' : 'none';
   updateCSVStatus();
-  renderAll();
+  renderSummary();renderLegend();renderSchedule();
+  renderGantt(); // 業務切り替え時は常に再描画
+  saveToDb();
+  // バーチャート表示中なら選択業務の行にスクロール
+  if(currentTab==='gantt') scrollGanttToBiz(id);
+}
+
+function scrollGanttToBiz(bizId){
+  // 選択業務のsep行を探してスクロール
+  const tbody = document.getElementById('g-body');
+  if(!tbody) return;
+  const rows = tbody.querySelectorAll('tr');
+  for(const tr of rows){
+    const td = tr.querySelector('.gantt-td-name.biz-sep');
+    if(td && td.textContent === (getBiz(bizId)||{}).name){
+      tr.scrollIntoView({behavior:'smooth', block:'nearest'});
+      break;
+    }
+  }
 }
 
 function renderBizBar(){
@@ -1375,6 +1446,8 @@ function renderAll(){
 /* ============================================================
    スケジュールテーブル（現在選択中の業務のみ）
    ============================================================ */
+function isMobile(){ return window.innerWidth<=768; }
+
 function renderSchedule(){
   const biz=curBiz();
   const sc=document.getElementById('schedule-content');
@@ -1457,7 +1530,7 @@ function renderSchedule(){
           const tdR=document.createElement('td');tdR.colSpan=10;
           tdR.style.cssText='text-align:center;vertical-align:middle;cursor:pointer;';
           tdR.innerHTML='<span class="reserve-badge">予備日</span>';
-          tdR.onclick=()=>openEditModal(biz.id,idx);
+          tdR.onclick=()=>{if(!isMobile())openEditModal(biz.id,idx);};
           tr.appendChild(tdR);tbody.appendChild(tr);
           return;
         }
@@ -1495,7 +1568,7 @@ function renderSchedule(){
           nameSpan.style.cssText='opacity:0.5;';
           tdB.appendChild(mark);tdB.appendChild(nameSpan);
         }
-        tdB.onclick=()=>openEditModal(biz.id,idx);
+        tdB.onclick=()=>{if(!isMobile())openEditModal(biz.id,idx);};
         tr.appendChild(tdB);
         // 点検方法セル（誘導員数の左）
         const tdM=document.createElement('td');
@@ -1524,7 +1597,7 @@ function renderSchedule(){
           const mw=mWrap.scrollWidth;
           if(mw>cw&&cw>0) mWrap.style.transform='scaleX('+(cw/mw)+')';
         });
-        tdM.onclick=()=>openEditModal(biz.id,idx);
+        tdM.onclick=()=>{if(!isMobile())openEditModal(biz.id,idx);};
         const mk=(v,s)=>{const t=document.createElement('td');if(s)t.style.cssText=s;t.textContent=v||'—';return t;};
         const s='font-size:11px;color:var(--text2);';
         tr.appendChild(mk(b?b.route:'—',s+'max-width:108px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'));
@@ -1547,7 +1620,7 @@ function renderSchedule(){
         tdPlace.appendChild(placeWrap);
         tdPlace.onmouseenter=()=>placeIcon.style.opacity='1';
         tdPlace.onmouseleave=()=>placeIcon.style.opacity='0';
-        tdPlace.onclick=()=>openPlaceModal(biz.id,idx,'place');
+        tdPlace.onclick=()=>{if(!isMobile())openPlaceModal(biz.id,idx,'place');};
         tr.appendChild(tdPlace);
         // 備考セル
         const tdNote=document.createElement('td');
@@ -1562,7 +1635,7 @@ function renderSchedule(){
         tdNote.appendChild(noteWrap);
         tdNote.onmouseenter=()=>noteIcon.style.opacity='1';
         tdNote.onmouseleave=()=>noteIcon.style.opacity='0';
-        tdNote.onclick=()=>openPlaceModal(biz.id,idx,'note');
+        tdNote.onclick=()=>{if(!isMobile())openPlaceModal(biz.id,idx,'note');};
         tr.appendChild(tdNote);
         tbody.appendChild(tr);
       });
@@ -1928,6 +2001,9 @@ function commitBarChange(bizId,idx,startDay,dur,ym,rows,y,mo,total){
    Supabase 連携
    ▼ ここに Supabase の URL と anon key を設定してください ▼
    ============================================================ */
+// ▼ スマホQRコード用URL（GitHub Pages公開後に書き換えてください）
+window.SITE_URL = 'https://frex-design.github.io/project-schedule/';
+
 const SUPABASE_URL  = 'https://rrsbyiypwgnwzqadwpky.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyc2J5aXlwd2dud3pxYWR3cGt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5OTI4NjMsImV4cCI6MjA4OTU2ODg2M30.ZNc4AebnJkBzQFvcxW_Pv2TSEBncyeuapCHE5IAeJQg';
 
@@ -1944,7 +2020,35 @@ function openDbModal(){
   document.getElementById('db-modal-overlay').classList.add('open');
 }
 function closeDbModal(){ document.getElementById('db-modal-overlay').classList.remove('open'); }
-function openGuide(){ document.getElementById('guide-modal-overlay').classList.add('open'); }
+function openGuide(){
+  document.getElementById('guide-modal-overlay').classList.add('open');
+  const url = (window.SITE_URL && window.SITE_URL.trim()) ? window.SITE_URL.trim() : window.location.href.split('?')[0];
+  const canvas = document.getElementById('guide-qr');
+  const urlEl = document.getElementById('guide-qr-url');
+  if(urlEl) urlEl.textContent = url;
+  if(!canvas) return;
+  // QRライブラリを動的ロードして生成
+  const generate = () => {
+    if(window.QRCode && canvas){
+      QRCode.toCanvas(canvas, url, {width:140,margin:1,color:{dark:'#1a2a4a',light:'#ffffff'}},
+        err=>{ if(err) console.warn('QR:',err); });
+    }
+  };
+  if(window.QRCode){ generate(); }
+  else {
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+    s.onload=generate;
+    s.onerror=()=>{
+      // フォールバック：Google Charts API
+      const img=document.createElement('img');
+      img.src='https://chart.googleapis.com/chart?chs=140x140&cht=qr&chl='+encodeURIComponent(url)+'&choe=UTF-8';
+      img.style.cssText='width:140px;height:140px;border-radius:8px;border:1px solid var(--border2);display:block;';
+      canvas.parentNode.replaceChild(img,canvas);
+    };
+    (document.head||document.documentElement).appendChild(s);
+  }
+}
 function closeGuide(){ document.getElementById('guide-modal-overlay').classList.remove('open'); }
 
 async function saveDbConfig(){
