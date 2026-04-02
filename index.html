@@ -2028,7 +2028,7 @@ function openGuide(){
   if(urlEl) urlEl.textContent = url;
   if(!img) return;
   // Google Charts API でQRコード画像を生成（確実・シンプル）
-  img.src = 'https://chart.googleapis.com/chart?chs=140x140&cht=qr&chl=' + encodeURIComponent(url) + '&choe=UTF-8&chld=M|1';
+  img.src = 'https://quickchart.io/qr?text=' + encodeURIComponent(url) + '&size=140&margin=1';
 }
 function closeGuide(){ document.getElementById('guide-modal-overlay').classList.remove('open'); }
 
