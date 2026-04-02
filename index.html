@@ -1,0 +1,1969 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>橋梁点検 月間スケジュール表</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue-50:#E6F1FB;--blue-100:#B5D4F4;--blue-200:#85B7EB;--blue-600:#185FA5;--blue-800:#0C447C;--blue-900:#042C53;
+  --teal-50:#E1F5EE;--teal-100:#9FE1CB;--teal-600:#0F6E56;--teal-800:#085041;
+  --amber-50:#FAEEDA;--amber-100:#FAC775;--amber-600:#854F0B;--amber-800:#633806;
+  --coral-50:#FAECE7;--coral-100:#F5C4B3;--coral-600:#993C1D;
+  --gray-50:#F1EFE8;--gray-100:#D3D1C7;--gray-800:#444441;
+  --red-600:#A32D2D;--red-50:#FCEBEB;
+  --bg:#FAFAF8;--surface:#FFFFFF;--surface2:#F4F3EF;--surface3:#ECEAE3;
+  --border:rgba(60,56,46,0.13);--border2:rgba(60,56,46,0.22);--border3:rgba(60,56,46,0.38);
+  --text:#1C1B18;--text2:#5F5E5A;--text3:#9A9890;
+  --radius:8px;--radius-lg:12px;
+  --shadow:0 1px 4px rgba(0,0,0,0.07);
+  --row-h:36px;--cell-w:34px;--name-w:200px;
+}
+body{font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP','Meiryo',sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;line-height:1.6;}
+
+/* ===== アプリヘッダー ===== */
+.app-header{background:var(--surface);border-bottom:0.5px solid var(--border);padding:0 20px;
+  display:flex;align-items:center;height:52px;gap:14px;position:sticky;top:0;z-index:300;}
+.logo{font-size:14px;font-weight:600;color:var(--blue-800);}
+.logo span{color:var(--text2);font-weight:400;}
+
+/* ===== 業務バー ===== */
+.biz-bar{background:var(--surface2);border-bottom:1.5px solid var(--border3);
+  padding:0 20px;display:flex;align-items:center;gap:10px;height:46px;
+  position:sticky;top:52px;z-index:250;overflow-x:auto;}
+.biz-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.06em;white-space:nowrap;flex-shrink:0;}
+.biz-tab{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;
+  border:0.5px solid var(--border2);background:var(--surface);color:var(--text2);
+  white-space:nowrap;flex-shrink:0;transition:all 0.15s;font-family:inherit;position:relative;}
+.biz-tab:hover{border-color:var(--blue-600);color:var(--blue-800);}
+.biz-tab.active{background:var(--blue-800);border-color:var(--blue-800);color:#fff;}
+.biz-tab .biz-edit-icon{font-size:10px;margin-left:4px;opacity:0;transition:opacity 0.15s;}
+.biz-tab:hover .biz-edit-icon{opacity:0.7;}
+.biz-add-btn{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;
+  border:0.5px solid var(--teal-600);background:var(--teal-600);color:#fff;font-family:inherit;}
+.biz-add-btn:hover{background:var(--teal-800);}
+
+/* ===== タブ ===== */
+.tab-bar{display:flex;border-bottom:1.5px solid var(--border2);padding:0 20px;
+  background:var(--surface);position:sticky;top:98px;z-index:200;}
+.tab{padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text3);
+  border:none;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;
+  background:none;font-family:inherit;transition:all 0.15s;}
+.tab:hover{color:var(--text2);}
+.tab.active{color:var(--blue-800);border-bottom-color:var(--blue-800);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* ===== コントロールバー ===== */
+.ctrl-bar{background:var(--surface);border-bottom:0.5px solid var(--border);
+  padding:10px 20px;display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;
+  position:relative;z-index:1;}
+.ctrl-group{display:flex;flex-direction:column;gap:3px;}
+.ctrl-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:0.06em;}
+input,select,textarea{font-family:inherit;font-size:12px;color:var(--text);
+  background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius);
+  padding:5px 9px;outline:none;transition:border-color 0.15s;}
+input:focus,select:focus,textarea:focus{border-color:var(--blue-600);}
+input[type=month]{width:148px;}input[type=number]{width:70px;}
+.csv-label{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;
+  border:0.5px solid var(--border2);border-radius:var(--radius);cursor:pointer;
+  font-size:12px;color:var(--text2);background:var(--surface);transition:all 0.15s;white-space:nowrap;}
+.csv-label:hover{border-color:var(--blue-600);color:var(--blue-800);}
+#csv-input{display:none;}
+.csv-status{font-size:11px;color:var(--teal-600);font-weight:600;display:none;align-self:flex-end;padding-bottom:4px;}
+
+/* ===== ボタン ===== */
+.btn{padding:5px 13px;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;
+  border:0.5px solid var(--border2);background:var(--surface);color:var(--text);
+  transition:all 0.15s;white-space:nowrap;font-family:inherit;}
+.btn:hover{background:var(--surface2);}
+.btn-primary{background:var(--blue-800);border-color:var(--blue-800);color:#fff;}
+.btn-primary:hover{background:var(--blue-900);}
+.btn-success{background:var(--teal-600);border-color:var(--teal-600);color:#fff;}
+.btn-success:hover{background:var(--teal-800);}
+.btn-danger{background:var(--red-600);border-color:var(--red-600);color:#fff;font-size:11px;padding:3px 8px;}
+.btn-sm{padding:4px 10px;font-size:11px;}
+
+/* ===== 業務なし状態 ===== */
+.no-biz{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:300px;gap:16px;color:var(--text3);}
+.no-biz-icon{font-size:40px;opacity:0.4;}
+.no-biz-msg{font-size:14px;font-weight:600;}
+.no-biz-sub{font-size:12px;}
+
+/* ===== サマリー ===== */
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;padding:12px 20px 4px;}
+.sum-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;}
+.sum-label{font-size:10px;color:var(--text3);font-weight:600;letter-spacing:0.05em;margin-bottom:3px;}
+.sum-val{font-size:20px;font-weight:700;color:var(--text);line-height:1;}
+.sum-unit{font-size:11px;color:var(--text2);font-weight:400;margin-left:2px;}
+
+/* ===== 凡例 ===== */
+.legend{display:flex;gap:12px;flex-wrap:wrap;padding:5px 20px 10px;align-items:center;}
+.leg-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);}
+.leg-dot{width:10px;height:10px;border-radius:3px;}
+
+/* ===== 点検方法管理 ===== */
+.method-manager{display:none;background:var(--surface);border:0.5px solid var(--border);
+  border-radius:var(--radius-lg);padding:12px 16px;margin:0 20px 10px;}
+.method-manager.open{display:block;}
+.mm-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.05em;margin-bottom:8px;}
+.mm-list{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;}
+.mm-item{display:inline-flex;align-items:center;gap:4px;padding:3px 8px 3px 10px;
+  border-radius:12px;font-size:11px;border:0.5px solid var(--border2);background:var(--surface2);color:var(--text);}
+.mm-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;line-height:1;}
+.mm-del:hover{color:var(--red-600);}
+.mm-add{display:flex;gap:6px;}.mm-add input{flex:1;}
+
+/* ===== スケジュールテーブル ===== */
+.pad{padding:0 20px 24px;}
+.month-section{margin-bottom:20px;}
+.month-heading{font-size:13px;font-weight:700;color:var(--blue-800);padding:6px 2px 4px;border-left:3px solid var(--blue-600);padding-left:8px;margin-bottom:6px;}
+.tbl-wrap{background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-lg);overflow:auto;box-shadow:var(--shadow);} 
+table{width:100%;border-collapse:collapse;font-size:12px;border:0.5px solid var(--border2);}
+thead th{background:#4a5568;padding:8px 9px;text-align:center;font-size:10px;font-weight:700;
+  color:#fff;letter-spacing:0.06em;border:0.5px solid #2d3748;
+  white-space:nowrap;position:sticky;z-index:10;}
+thead th{top:0;}
+tbody td{padding:5px 7px;border:0.5px solid var(--border2);vertical-align:middle;text-align:center;}
+tbody tr.holiday{background:#F8F6F0;}
+tbody tr.holiday-day{background:rgba(245,196,179,0.22);}
+tbody tr.holiday-day td.dc{color:var(--coral-600);font-weight:700;}
+.g-day.hol .g-day-n,.g-day.hol .g-day-w{color:var(--coral-600);}
+.g-day.hol{background:rgba(245,196,179,0.38);}
+.g-cell.hol{background:rgba(245,196,179,0.3);}
+.hol-mark{font-size:7px;color:var(--coral-600);line-height:1;display:block;}
+tbody tr.wsat td.dc{color:var(--blue-800);font-weight:700;}
+tbody tr.wsat{background:rgba(181,212,244,0.18);}
+tbody tr.wsun{background:rgba(245,196,179,0.22);}
+tbody tr.wsun td.dc{color:var(--coral-600);font-weight:700;}
+tbody tr:hover{background:var(--blue-50);}
+tbody tr.holiday:hover{background:#ECEADE;}
+tbody tr.cont td{border-top:0.5px dashed var(--border2);}
+.dc{font-weight:600;font-size:12px;white-space:nowrap;color:var(--text2);text-align:center;}
+.wc{font-size:11px;color:var(--text3);}
+.btags{display:flex;flex-wrap:wrap;gap:3px;align-items:center;text-align:left;}
+.btag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;cursor:pointer;transition:opacity 0.15s;white-space:nowrap;}
+.btag:hover{opacity:0.75;}
+.btag-B200{background:var(--blue-50);color:var(--blue-800);border:0.5px solid var(--blue-100);}
+.btag-高所{background:#FEF3E2;color:var(--amber-800);border:0.5px solid #FAC775;}
+.btag-tunnel{background:var(--amber-50);color:var(--amber-800);border:0.5px solid var(--amber-100);}
+.btag-other{background:var(--gray-50);color:var(--gray-800);border:0.5px solid var(--gray-100);}
+/* 予備日 */
+.reserve-row td{background:#F0EDFB!important;}
+.reserve-row td.dc,.reserve-row td.wc{background:#F0EDFB!important;}
+.reserve-row:hover td{background:#E8E2F8!important;}
+.reserve-badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:10px;font-weight:700;background:#CECBF6;color:#3C3489;border:0.5px solid #AFA9EC;}
+.reserve-row td{border-right:none!important;border-left:none!important;}
+.reserve-row td:first-child{border-left:0.5px solid var(--border2)!important;}
+.reserve-row td:last-child{border-right:0.5px solid var(--border2)!important;}
+.add-btn{display:inline-flex;align-items:center;padding:2px 7px;border-radius:12px;font-size:10px;
+  color:var(--text3);border:0.5px dashed var(--border2);cursor:pointer;background:none;font-family:inherit;transition:all 0.15s;}
+.add-btn:hover{border-color:var(--blue-600);color:var(--blue-800);background:var(--blue-50);}
+.mpill{display:inline-block;padding:3px 9px;border-radius:12px;font-size:11px;cursor:pointer;
+  border:0.5px solid var(--border2);color:var(--text2);background:var(--surface);transition:all 0.15s;}
+.mpill.on{background:var(--blue-50);border-color:var(--blue-600);color:var(--blue-800);font-weight:700;}
+
+/* ===== バーチャート ===== */
+.gantt-outer{overflow:auto;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);}
+/* ガントチャート — table構造で左右行を完全同期 */
+.gantt-outer{overflow:auto;}
+.gantt-table{border-collapse:collapse;min-width:max-content;}
+/* 左列ヘッダー */
+.gantt-th-name{
+  width:var(--name-w);min-width:var(--name-w);
+  background:var(--surface2);border-right:1.5px solid var(--border3);border-bottom:1.5px solid var(--border3);
+  font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.05em;
+  padding:0 12px;
+  position:sticky;top:0;left:0;z-index:31;height:56px;vertical-align:middle;}
+/* 右ヘッダー */
+.gantt-th-calendar{
+  background:var(--surface2);border-bottom:1.5px solid var(--border3);
+  position:sticky;top:0;z-index:25;vertical-align:top;padding:0;}
+/* 橋梁名セル */
+.gantt-td-name{
+  width:var(--name-w);min-width:var(--name-w);
+  background:var(--surface);border-right:1.5px solid var(--border3);border-bottom:0.5px solid var(--border);
+  font-size:11px;font-weight:600;color:var(--text);
+  padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  position:sticky;left:0;z-index:10;
+  height:36px;box-sizing:border-box;}
+.gantt-td-name.biz-sep{
+  background:var(--blue-800);color:#fff;font-size:10px;font-weight:700;
+  letter-spacing:0.04em;height:28px;}
+/* グリッドセル */
+.gantt-td-grid{padding:0;vertical-align:top;border-bottom:0.5px solid var(--border);}
+.gantt-td-grid.biz-sep{height:28px;background:var(--blue-800);border-bottom:none;}
+/* 後方互換 */
+.gantt-wrap{display:contents;}
+.gantt-left-head{display:none;}
+.gantt-right-head{display:none;}
+.gantt-left-names{display:none;}
+.gantt-body{display:none;}
+
+.g-name{height:36px;display:flex;align-items:center;padding:0 10px;
+  border-bottom:0.5px solid var(--border);box-sizing:border-box;
+  font-size:11px;font-weight:600;color:var(--text);
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.g-name:nth-child(even){background:var(--surface2);}
+/* 業務区切り行 */
+.g-name.biz-sep{background:var(--blue-800);color:#fff;font-size:10px;font-weight:700;
+  letter-spacing:0.04em;padding:0 10px;height:28px;box-sizing:border-box;flex-shrink:0;}
+.g-row.biz-sep{height:28px;background:var(--blue-800);}
+
+
+.g-month-row{display:flex;height:28px;border-bottom:0.5px solid var(--border2);}
+.g-month-cell{display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text2);border-right:0.5px solid var(--border);}
+.g-day-row{display:flex;height:28px;}
+.g-day{width:var(--cell-w);min-width:var(--cell-w);height:28px;flex-shrink:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;font-size:10px;border-right:0.5px solid var(--border);}
+.g-day-n{font-size:10px;font-weight:600;color:var(--text3);line-height:1;}
+.g-day-w{font-size:9px;color:var(--text3);line-height:1;}
+.g-day.sat .g-day-n,.g-day.sat .g-day-w{color:var(--blue-800);}
+.g-day.sun .g-day-n,.g-day.sun .g-day-w{color:var(--coral-600);}
+.g-day.sat{background:rgba(181,212,244,0.35);}
+.g-day.sun{background:rgba(245,196,179,0.38);}
+
+.g-row{display:flex;height:36px;min-height:36px;border-bottom:0.5px solid var(--border);box-sizing:border-box;position:relative;}
+.g-row:not(.biz-sep):nth-child(even){background:rgba(244,243,239,0.55);}
+.g-cell{width:var(--cell-w);min-width:var(--cell-w);height:36px;box-sizing:border-box;flex-shrink:0;
+  border-right:0.5px solid var(--border);cursor:pointer;transition:background 0.1s;}
+.g-cell:hover{background:rgba(181,212,244,0.45);}
+.g-cell.sat{background:rgba(181,212,244,0.28);}
+.g-cell.sun{background:rgba(245,196,179,0.3);}
+.bar-layer{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:5;}
+/* 予備日バー */
+.gbar-reserve{position:absolute;pointer-events:all;cursor:pointer;
+  background:#EEEDFE;border-left:2px solid #AFA9EC;border-right:2px solid #AFA9EC;
+  border-top:none;border-bottom:none;
+  display:flex;align-items:center;justify-content:center;z-index:4;}
+.gbar-reserve-lbl{writing-mode:vertical-rl;text-orientation:upright;
+  font-size:9px;font-weight:700;color:#3C3489;letter-spacing:0.1em;
+  pointer-events:none;}
+.gbar-reserve:hover{background:#E4E1FB;}
+.gbar{position:absolute;border-radius:4px;cursor:grab;pointer-events:all;
+  display:flex;align-items:center;padding:0 8px 0 6px;font-size:9px;font-weight:700;
+  white-space:nowrap;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.15);transition:box-shadow 0.1s;z-index:5;
+  transform:translateY(0);}
+.gbar:hover{box-shadow:0 2px 8px rgba(0,0,0,0.22);z-index:6;}
+.gbar.dragging{cursor:grabbing;opacity:0.82;z-index:10;box-shadow:0 4px 16px rgba(0,0,0,0.28);}
+.gbar-lbl{overflow:hidden;text-overflow:ellipsis;pointer-events:none;flex:1;min-width:0;}
+.gbar-handle{position:absolute;top:0;bottom:0;width:7px;cursor:ew-resize;background:rgba(0,0,0,0.13);pointer-events:all;}
+.gbar-handle.L{left:0;border-radius:4px 0 0 4px;}
+.gbar-handle.R{right:0;border-radius:0 4px 4px 0;}
+.gbar-del{position:absolute;top:-5px;right:-5px;width:15px;height:15px;border-radius:50%;
+  background:var(--red-600);color:#fff;font-size:9px;line-height:15px;text-align:center;
+  display:none;cursor:pointer;z-index:11;pointer-events:all;}
+.gbar:hover .gbar-del{display:block;}
+.today-line{position:absolute;top:0;bottom:0;width:2px;background:var(--coral-600);opacity:0.65;z-index:15;pointer-events:none;}
+
+/* ===== モーダル ===== */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:none;
+  align-items:center;justify-content:center;z-index:600;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border-radius:var(--radius-lg);width:100%;max-width:490px;
+  box-shadow:0 8px 40px rgba(0,0,0,0.18);overflow:hidden;}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:0.5px solid var(--border);}
+.modal-ttl{font-size:14px;font-weight:700;color:var(--text);}
+.modal-x{background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3);line-height:1;}
+.modal-body{padding:16px 18px;}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:11px 18px;border-top:0.5px solid var(--border);background:var(--surface2);}
+.frow{margin-bottom:11px;}
+.flbl{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.05em;margin-bottom:3px;text-transform:uppercase;}
+.frow input,.frow select,.frow textarea{width:100%;}
+.binfo{background:var(--blue-50);border:0.5px solid var(--blue-100);border-radius:var(--radius);
+  padding:7px 11px;font-size:11px;color:var(--blue-800);display:none;margin-top:4px;line-height:1.7;}
+.mpills{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 5px;}
+.add-m-row{display:flex;gap:6px;margin-top:3px;}.add-m-row input{flex:1;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+@media print{
+  body > *:not(#panel-schedule){display:none!important;}
+  #panel-schedule{display:block!important;}
+  .biz-bar,.app-header,.ctrl-bar,.tab-bar,.method-manager,.modal-overlay,.add-btn,.btn,.gbar-del,.gbar-handle,
+  .summary-grid,.legend-row,#legend-row,#summary-wrap,.no-biz,.csv-status{display:none!important;}
+  .pad{padding:0;}
+  .tbl-wrap{border:1px solid #555;border-radius:0;box-shadow:none;overflow:visible;}
+  tbody tr.no-entry td{border-bottom:0.8px solid #666!important;}
+  tr.no-entry.print-hide{display:none!important;}
+  tr.add-row{display:none!important;}
+  p[style*='font-size:10px']{display:none!important;}
+  /* フォント：ゴシック系・濃く */
+  body,table,th,td{
+    font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP','Meiryo','ヒラギノ角ゴ ProN','メイリオ',sans-serif!important;
+    font-weight:600!important;
+    color:#111!important;
+  }
+  /* テーブル全体 */
+  table{font-size:12px!important;border-collapse:collapse;}
+  /* ヘッダー行 */
+  thead th{
+    font-size:10px!important;font-weight:800!important;
+    position:static;
+    background:#4a5568!important;color:#fff!important;
+    border:1px solid #2d3748!important;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  /* 日付・曜日 */
+  .dc{font-size:12px!important;font-weight:800!important;color:#111!important;}
+  .wc{font-size:12px!important;font-weight:700!important;color:#333!important;}
+  /* データセル */
+  table{border:0.8px solid #555!important;}
+  tbody td{font-size:11px!important;font-weight:600!important;color:#111!important;border:0.8px solid #666!important;}
+  thead th{border:0.8px solid #2d3748!important;}
+  tbody td *{font-size:11px!important;font-weight:600!important;color:#111!important;}
+  #tbl-body td{font-size:11px!important;}
+  #tbl-body td span,#tbl-body td div{font-size:11px!important;}
+  /* 土日・祝日・予備日の背景 */
+  tbody tr.holiday{background:#f0ede0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  tbody tr.wsat{background:#deeaf7!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  tbody tr.wsun{background:#fde8e0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  tbody tr.holiday-day{background:#fde8e0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  tbody tr.wsat td.dc{color:#0C447C!important;}
+  tbody tr.wsun td.dc,tbody tr.holiday-day td.dc{color:#993C1D!important;}
+  .btag{-webkit-print-color-adjust:exact;print-color-adjust:exact;font-weight:700!important;}
+  .reserve-row td{background:#E8E2F8!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .reserve-badge{background:#CECBF6!important;color:#3C3489!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .btag-B200{background:#B5D4F4!important;color:#0C447C!important;}
+  .btag-高所{background:#FEF3E2!important;color:#854F0B!important;}
+  .btag-other{background:#D3D1C7!important;color:#444441!important;}
+  .month-section.print-hide{display:none!important;}
+  tr.print-hide{display:none!important;}
+  /* 月見出し */
+  .month-heading{
+    font-size:12px!important;font-weight:800!important;color:#1a2a4a!important;
+    border-left:4px solid #2d3748;padding-left:8px;margin-bottom:4px;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  @page{margin:15mm 12mm 15mm 12mm;size:A3 landscape;}
+}
+</style>
+</head>
+<body>
+
+<!-- アプリヘッダー -->
+<header class="app-header">
+  <div class="logo">橋梁点検<span>　月間スケジュール表</span></div>
+  <div style="flex:1"></div>
+  <div id="db-status" style="font-size:11px;padding:3px 10px;border-radius:12px;background:var(--surface2);color:var(--text3);cursor:pointer;" onclick="openDbModal()">⚙ DB未接続</div>
+  <button class="btn btn-sm" onclick="toggleMM()">点検方法管理</button>
+  <button class="btn btn-sm btn-success" onclick="printSchedule()">🖨 印刷</button>
+</header>
+
+<!-- Supabase設定モーダル -->
+<div class="modal-overlay" id="db-modal-overlay">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-head">
+      <div class="modal-ttl">Supabase 接続設定</div>
+      <button class="modal-x" onclick="closeDbModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="frow">
+        <div class="flbl">Supabase URL</div>
+        <input type="text" id="db-url" placeholder="https://xxxxxxxxxx.supabase.co">
+      </div>
+      <div class="frow">
+        <div class="flbl">Anon Key</div>
+        <input type="text" id="db-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+      </div>
+      <div style="font-size:11px;color:var(--text3);background:var(--surface2);border-radius:var(--radius);padding:8px 10px;line-height:1.7;">
+        SupabaseプロジェクトのURL と anon key を入力してください。<br>
+        設定はブラウザに保存されます。<br>
+        <a href="https://supabase.com/dashboard" target="_blank" style="color:var(--blue-600)">Supabase ダッシュボード →</a>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger btn-sm" onclick="clearDbConfig()" style="margin-right:auto">接続解除</button>
+      <button class="btn" onclick="closeDbModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveDbConfig()">接続する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 業務バー -->
+<div class="biz-bar" id="biz-bar">
+  <span class="biz-label">業務：</span>
+  <div id="biz-tabs" style="display:flex;gap:6px;align-items:center;"></div>
+  <button class="biz-add-btn" onclick="openBizModal()">＋ 業務追加</button>
+</div>
+
+<!-- 業務追加・編集モーダル -->
+<div class="modal-overlay" id="biz-modal-overlay">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-head">
+      <div class="modal-ttl" id="biz-modal-ttl">業務を追加</div>
+      <button class="modal-x" onclick="closeBizModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="frow">
+        <div class="flbl">業務名</div>
+        <input type="text" id="biz-inp" placeholder="例：大館市橋梁定期点検業務" style="width:100%">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="biz-del-btn" onclick="deleteBizFromModal()" style="display:none;margin-right:auto">削除</button>
+      <button class="btn" onclick="closeBizModal()">キャンセル</button>
+      <button class="btn btn-primary" id="biz-save-btn" onclick="saveBiz()">登録</button>
+    </div>
+  </div>
+</div>
+
+<!-- タブ -->
+<div class="tab-bar">
+  <button class="tab active" onclick="switchTab('schedule',this)">📋 月間スケジュール表</button>
+  <button class="tab" onclick="switchTab('gantt',this)">📊 バーチャート工程表</button>
+</div>
+
+<!-- コントロールバー -->
+<div class="ctrl-bar" id="ctrl-bar" style="display:none">
+  <div class="ctrl-group">
+    <div class="ctrl-label">年度</div>
+    <select id="nendo-sel" onchange="onNendoChange()" style="width:120px"></select>
+  </div>
+  <div style="align-self:flex-end;padding-bottom:6px;color:var(--text3);font-size:11px">または</div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">開始月</div>
+    <input type="month" id="ym-start" onchange="onCustomRange()">
+  </div>
+  <div style="align-self:flex-end;padding-bottom:6px;color:var(--text3);font-size:13px">〜</div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">終了月</div>
+    <input type="month" id="ym-end" onchange="onCustomRange()">
+  </div>
+
+  <div class="ctrl-group">
+    <div class="ctrl-label">橋梁CSVを読み込む（この業務に登録）※CSV自動判定</div>
+    <label class="csv-label" for="csv-input">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13h12M8 2v8m0 0-3-3m3 3 3-3"/></svg>
+      CSVファイルを選択
+    </label>
+    <input type="file" id="csv-input" accept=".csv" onchange="loadCSV(this)">
+  </div>
+  <span class="csv-status" id="csv-status"></span>
+  <div style="flex:1"></div>
+  <button class="btn btn-primary" onclick="openAddModal(null,null)">＋ 点検を追加</button>
+</div>
+
+<!-- 点検方法管理 -->
+<div class="method-manager" id="method-manager">
+  <div class="mm-title">点検方法の管理</div>
+  <div class="mm-list" id="mm-list"></div>
+  <div class="mm-add">
+    <input type="text" id="mm-input" placeholder="新しい点検方法を入力...">
+    <button class="btn btn-sm btn-primary" onclick="addMethod()">＋ 追加</button>
+  </div>
+</div>
+
+<!-- 点検方法 編集モーダル -->
+<div class="modal-overlay" id="method-modal-overlay">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-head">
+      <div class="modal-ttl">点検方法を編集</div>
+      <button class="modal-x" onclick="closeMethodModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="frow">
+        <div class="flbl">点検方法名</div>
+        <input type="text" id="method-inp" style="width:100%">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" onclick="deleteMethodFromModal()" style="margin-right:auto">削除</button>
+      <button class="btn" onclick="closeMethodModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveMethod()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- サマリー・凡例 -->
+<div id="summary-wrap" style="display:none">
+  <div class="summary-grid" id="summary-grid"></div>
+  <div class="legend" id="legend-row"></div>
+</div>
+
+<!-- スケジュール表タブ -->
+<div id="panel-schedule" class="tab-panel active">
+  <div id="schedule-content"></div>
+</div>
+
+<!-- バーチャートタブ -->
+<div id="panel-gantt" class="tab-panel">
+  <div class="pad">
+    <div class="gantt-outer" id="gantt-outer">
+      <table class="gantt-table" id="gantt-table">
+        <thead id="g-head-wrap">
+          <tr>
+            <th class="gantt-th-name">業務 / 橋梁名</th>
+            <th class="gantt-th-calendar" id="g-head"></th>
+          </tr>
+        </thead>
+        <tbody id="g-body">
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:11px;color:var(--text3);margin-top:8px">
+      セルをクリック → 点検を追加　／　バーをドラッグ → 日程を移動　／　バー両端をドラッグ → 期間を伸縮　／　バー右上の × → 削除
+    </p>
+  </div>
+</div>
+
+<!-- モーダル -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-ttl" id="modal-ttl">点検を追加</div>
+      <button class="modal-x" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="frow">
+        <div class="flbl">業務</div>
+        <select id="m-biz" onchange="onBizSel()"></select>
+      </div>
+      <div class="frow"><div class="flbl">日付</div><input type="date" id="m-date"></div>
+      <div class="frow">
+        <div class="flbl">橋梁名</div>
+        <select id="m-bridge" onchange="onBSel()"><option value="">— 橋梁を選択してください —</option></select>
+        <div class="binfo" id="binfo"></div>
+      </div>
+      <div class="frow">
+        <div class="flbl">点検方法（複数選択可）</div>
+        <div class="mpills" id="m-pills"></div>
+        <div class="add-m-row">
+          <input type="text" id="m-new-m" placeholder="点検方法を追加...">
+          <button class="btn btn-sm" onclick="addMFromModal()">＋</button>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="frow"><div class="flbl">誘導員数</div><input type="number" id="m-guide" min="0" placeholder="2"></div>
+        <div class="frow"><div class="flbl">規制方法</div>
+          <select id="m-reg"><option>片側交互通行</option><option>全面通行止め</option><option>夜間通行止め</option><option>規制なし</option></select>
+        </div>
+      </div>
+      <div class="frow" style="font-size:11px;color:var(--text3);background:var(--surface2);border-radius:var(--radius);padding:7px 10px;">
+        集合場所・備考はスケジュール表のセルをクリックして直接入力できます
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button id="reserve-btn" class="btn" onclick="saveReserve()" style="background:#EEEDFE;border-color:#AFA9EC;color:#3C3489;margin-right:auto">📅 予備日として登録</button>
+      <button class="btn" onclick="closeModal()">キャンセル</button>
+      <button id="del-btn" class="btn btn-danger" onclick="deleteEntry()" style="display:none">削除</button>
+      <button id="del-reserve-btn" class="btn btn-danger" onclick="deleteReserve()" style="display:none">予備日を削除</button>
+      <button class="btn btn-primary" onclick="saveEntry()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 集合場所・備考 編集モーダル -->
+<div class="modal-overlay" id="place-modal-overlay">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-head">
+      <div class="modal-ttl" id="place-modal-ttl">集合場所を編集</div>
+      <button class="modal-x" onclick="closePlaceModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="frow" id="place-frow">
+        <div class="flbl">集合場所</div>
+        <input type="text" id="place-inp" placeholder="集合場所を入力" style="width:100%">
+      </div>
+      <div class="frow" id="note-frow">
+        <div class="flbl">備考</div>
+        <textarea id="note-inp" rows="4" placeholder="特記事項など" style="width:100%;resize:vertical"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="place-del-btn" onclick="clearPlaceNote()" style="margin-right:auto">クリア</button>
+      <button class="btn" onclick="closePlaceModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="savePlaceNote()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   データ構造
+   biz[]   = [{id, name, bridges[], entries[]}]
+   bridges = [{code,route,name,kana,address,length,spans,width,year}]
+   entries = [{date,bridgeIdx,methods[],guide,reg,place,note,durDays}]
+   ============================================================ */
+let bizList   = [];  // 業務一覧
+let currentBiz = null; // 現在選択中の業務 id
+let methods   = ["BT-200","高所作業車"];
+let editIdx   = -1;
+let currentTab = 'schedule';
+
+// 期間ヘルパー
+function buildYmList(start,end){
+  const result=[];
+  let [y,m]=start.split('-').map(Number);
+  const [ey,em]=end.split('-').map(Number);
+  while(y<ey||(y===ey&&m<=em)){
+    result.push(y+'-'+(m<10?'0':'')+m);
+    m++;if(m>12){m=1;y++;}
+  }
+  return result;
+}
+function getYmRange(){
+  const s=document.getElementById('ym-start');
+  const e=document.getElementById('ym-end');
+  if(!s||!e||!s.value) return [];
+  return buildYmList(s.value, e.value||s.value);
+}
+function getYmStart(){ const s=document.getElementById('ym-start');return s?s.value:''; }
+function onNendoChange(){
+  const sel=document.getElementById('nendo-sel');
+  if(!sel.value) return;
+  const y=parseInt(sel.value);
+  const start=y+'-04', end=(y+1)+'-03';
+  document.getElementById('ym-start').value=start;
+  document.getElementById('ym-end').value=end;
+  renderAll();
+}
+function onCustomRange(){
+  // カスタム入力時は年度セレクターを「カスタム」に
+  document.getElementById('nendo-sel').value='';
+  renderAll();
+}
+function buildNendoSel(){
+  const sel=document.getElementById('nendo-sel');
+  const now=new Date();
+  // 現在の年度（4月始まり）
+  const curNendo=now.getMonth()>=3?now.getFullYear():now.getFullYear()-1;
+  sel.innerHTML='<option value="">カスタム期間</option>';
+  for(let y=curNendo+2;y>=curNendo-3;y--){
+    const o=document.createElement('option');
+    o.value=y;
+    o.textContent=y+'年度（'+y+'/4〜'+(y+1)+'/3）';
+    if(y===curNendo) o.selected=true;
+    sel.appendChild(o);
+  }
+}
+
+
+// 数値を小数点第1位まで表示
+function fmt1(v){ const n=parseFloat(v); return isNaN(n)?'—':n.toFixed(1); }
+
+// 日本の祝日（固定分＋振替含む主要祝日 2024-2028）
+const HOLIDAYS = new Set([
+  // 2024
+  '2024-01-01','2024-01-08','2024-02-11','2024-02-12','2024-02-23',
+  '2024-03-20','2024-04-29','2024-05-03','2024-05-04','2024-05-05','2024-05-06',
+  '2024-07-15','2024-08-11','2024-08-12','2024-09-16','2024-09-22','2024-09-23',
+  '2024-10-14','2024-11-03','2024-11-04','2024-11-23',
+  // 2025
+  '2025-01-01','2025-01-13','2025-02-11','2025-02-23','2025-02-24',
+  '2025-03-20','2025-04-29','2025-05-03','2025-05-04','2025-05-05','2025-05-06',
+  '2025-07-21','2025-08-11','2025-09-15','2025-09-21','2025-09-22','2025-09-23',
+  '2025-10-13','2025-11-03','2025-11-23','2025-11-24',
+  // 2026
+  '2026-01-01','2026-01-12','2026-02-11','2026-02-23',
+  '2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06',
+  '2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23',
+  '2026-10-12','2026-11-03','2026-11-23',
+  // 2027
+  '2027-01-01','2027-01-11','2027-02-11','2027-02-23',
+  '2027-03-21','2027-03-22','2027-04-29','2027-05-03','2027-05-04','2027-05-05',
+  '2027-07-19','2027-08-11','2027-09-20','2027-09-21','2027-09-23',
+  '2027-10-11','2027-11-03','2027-11-23',
+]);
+function isHoliday(ds){ return HOLIDAYS.has(ds); }
+const DAYS = ["日","月","火","水","木","金","土"];
+const TC   = {"BT-200":"B200","高所作業車":"高所"};
+const tc   = m => 'btag-'+(TC[m]||'other');
+
+const PALS = [
+  {bg:'#B5D4F4',fg:'#0C447C',bd:'#378ADD'},{bg:'#9FE1CB',fg:'#085041',bd:'#1D9E75'},
+  {bg:'#FAC775',fg:'#633806',bd:'#EF9F27'},{bg:'#F4C0D1',fg:'#72243E',bd:'#D4537E'},
+  {bg:'#CECBF6',fg:'#3C3489',bd:'#7F77DD'},{bg:'#C0DD97',fg:'#27500A',bd:'#639922'},
+  {bg:'#F5C4B3',fg:'#712B13',bd:'#D85A30'},{bg:'#D3D1C7',fg:'#444441',bd:'#888780'},
+];
+const pal = i => PALS[i % PALS.length];
+const CW = 34, RH = 36;
+
+/* ---- 業務ヘルパー ---- */
+function getBiz(id){ return bizList.find(b=>b.id===id)||null; }
+function curBiz(){ return getBiz(currentBiz); }
+
+/* ============================================================
+   業務管理
+   ============================================================ */
+let editingBizId = null; // 編集中の業務id（nullなら新規追加）
+
+function openBizModal(){
+  // 新規追加モード
+  editingBizId = null;
+  document.getElementById('biz-modal-ttl').textContent = '業務を追加';
+  document.getElementById('biz-inp').value = '';
+  document.getElementById('biz-del-btn').style.display = 'none';
+  document.getElementById('biz-save-btn').textContent = '登録';
+  document.getElementById('biz-modal-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('biz-inp').focus(), 80);
+}
+function openBizEditModal(id){
+  // 編集モード
+  const biz = getBiz(id);if(!biz)return;
+  editingBizId = id;
+  document.getElementById('biz-modal-ttl').textContent = '業務を編集';
+  document.getElementById('biz-inp').value = biz.name;
+  document.getElementById('biz-del-btn').style.display = 'inline-block';
+  document.getElementById('biz-save-btn').textContent = '保存';
+  document.getElementById('biz-modal-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('biz-inp').focus(), 80);
+}
+function closeBizModal(){
+  document.getElementById('biz-modal-overlay').classList.remove('open');
+}
+function saveBiz(){
+  const inp = document.getElementById('biz-inp');
+  const name = inp.value.trim();
+  if(!name){ inp.focus(); return; }
+  if(editingBizId){
+    // 編集
+    const biz = getBiz(editingBizId);if(!biz)return;
+    if(bizList.some(b=>b.id!==editingBizId&&b.name===name)){ alert('同じ名前の業務が既にあります'); return; }
+    biz.name = name;
+    closeBizModal();
+    renderBizBar();
+    renderAll();
+  } else {
+    // 新規追加
+    if(bizList.some(b=>b.name===name)){ alert('同じ名前の業務が既にあります'); return; }
+    const biz = {id: Date.now()+'', name, bridges:[], entries:[]};
+    bizList.push(biz);
+    closeBizModal();
+    renderBizBar();
+    selectBiz(biz.id);
+  }
+}
+function addBiz(){ saveBiz(); } // 後方互換
+function deleteBizFromModal(){
+  const id = editingBizId;
+  const biz = getBiz(id);if(!biz)return;
+  if(!confirm('業務「'+biz.name+'」を削除しますか？\n登録された点検データも全て削除されます。')) return;
+  closeBizModal();
+  deleteBizFromDb(id);
+  bizList = bizList.filter(b=>b.id!==id);
+  if(currentBiz===id){
+    currentBiz = bizList.length ? bizList[0].id : null;
+  }
+  renderBizBar();
+  renderAll();
+}
+function deleteBiz(id){
+  editingBizId = id;
+  deleteBizFromModal();
+}
+
+function selectBiz(id){
+  currentBiz = id;
+  renderBizBar();
+  document.getElementById('ctrl-bar').style.display = id ? '' : 'none';
+  document.getElementById('summary-wrap').style.display = id ? '' : 'none';
+  updateCSVStatus();
+  renderAll();
+}
+
+function renderBizBar(){
+  const wrap = document.getElementById('biz-tabs');
+  wrap.innerHTML = '';
+  bizList.forEach(biz=>{
+    const btn = document.createElement('button');
+    btn.className = 'biz-tab' + (biz.id===currentBiz?' active':'');
+    // クリック：未選択なら選択、選択済みなら編集モーダル
+    btn.onclick = () => {
+      if(currentBiz===biz.id){ openBizEditModal(biz.id); }
+      else { selectBiz(biz.id); }
+    };
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = biz.name;
+    btn.appendChild(nameSpan);
+    const icon = document.createElement('span');
+    icon.className = 'biz-edit-icon';
+    icon.textContent = '✎';
+    btn.appendChild(icon);
+    wrap.appendChild(btn);
+  });
+
+  // 業務なし表示
+  const sc = document.getElementById('schedule-content');
+  if(!currentBiz){
+    document.getElementById('ctrl-bar').style.display='none';
+    document.getElementById('summary-wrap').style.display='none';
+    sc.innerHTML='<div class="no-biz"><div class="no-biz-icon">📋</div>'
+      +'<div class="no-biz-msg">業務が登録されていません</div>'
+      +'<div class="no-biz-sub">上の「業務追加」から業務名を入力して追加してください</div></div>';
+  }
+}
+
+/* ============================================================
+   CSV
+   ============================================================ */
+function loadCSV(inp){
+  const biz=curBiz(); if(!biz){alert('先に業務を選択してください');return;}
+  const f=inp.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      biz.bridges=parseCSV(e.target.result);
+      updateCSVStatus();
+      buildBSel();
+      renderAll();
+    }catch(err){alert('CSV読み込みエラー: '+err.message);}
+  };
+  r.readAsText(f,'UTF-8');
+}
+function updateCSVStatus(){
+  const st=document.getElementById('csv-status');
+  const biz=curBiz();
+  if(biz&&biz.bridges.length>0){
+    st.textContent='✓ '+biz.bridges.length+'件 読み込み済み';st.style.display='block';
+  } else {
+    st.style.display='none';
+  }
+}
+function parseCSV(txt){
+  txt=txt.replace(/^\uFEFF/,'');
+  const lines=txt.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2) throw new Error('データが見つかりません');
+
+  // ヘッダー行を解析して列インデックスを自動判定
+  const header=parseCSVLine(lines[0]).map(h=>h.trim());
+
+  // 各項目のキーワード候補（部分一致で探す）
+  const KEYS={
+    name:   ['橋梁名称','橋梁名','橋名'],
+    route:  ['路線名称','路線名','路線'],
+    code:   ['橋梁コード','コード','管理番号'],
+    length: ['橋長','施設延長','延長','トンネル長','施設長'],
+    spans:  ['径間数','径間'],
+    width:  ['幅員'],
+    address:['所在地','住所'],
+    year:   ['架設年次','架設年','竣工年'],
+    kana:   ['カナ名称','カナ','ふりがな'],
+  };
+
+  function findCol(keys){
+    for(const key of keys){
+      const i=header.findIndex(h=>h.includes(key));
+      if(i>=0) return i;
+    }
+    return -1;
+  }
+
+  const cols={};
+  for(const [field,keys] of Object.entries(KEYS)){
+    cols[field]=findCol(keys);
+  }
+
+  // 橋梁名か路線名の少なくとも一方が見つからなければエラー
+  if(cols.name<0 && cols.route<0){
+    throw new Error('ヘッダー行に「橋梁名」または「路線名」が見つかりません。\n\nCSVの1行目（ヘッダー）を確認してください。\n検出されたヘッダー: '+header.join(' / '));
+  }
+
+  const get=(c,row)=>c>=0&&c<row.length?row[c].trim():'';
+
+  const result=lines.slice(1).map(l=>{
+    const c=parseCSVLine(l);
+    if(c.every(v=>!v.trim())) return null; // 空行スキップ
+    return{
+      code:    get(cols.code,c),
+      route:   get(cols.route,c),
+      name:    get(cols.name,c),
+      kana:    get(cols.kana,c),
+      address: get(cols.address,c),
+      length:  get(cols.length,c),
+      spans:   get(cols.spans,c),
+      width:   get(cols.width,c),
+      year:    get(cols.year,c),
+    };
+  }).filter(r=>r&&(r.name||r.route)); // 橋梁名か路線名がある行のみ
+
+  if(result.length===0) throw new Error('有効なデータ行が見つかりませんでした');
+  return result;
+}
+function parseCSVLine(l){
+  const r=[];let cur='',q=false;
+  for(let i=0;i<l.length;i++){
+    if(l[i]==='"'){q=!q;continue;}
+    if(l[i]===','&&!q){r.push(cur);cur='';continue;}
+    cur+=l[i];
+  }
+  r.push(cur);return r;
+}
+
+/* ============================================================
+   タブ
+   ============================================================ */
+function switchTab(name,btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+  currentTab=name;
+  if(name==='gantt') renderGantt();
+}
+
+/* ============================================================
+   点検方法管理
+   ============================================================ */
+let editingMethodIdx = -1;
+
+function toggleMM(){document.getElementById('method-manager').classList.toggle('open');renderMM();}
+function renderMM(){
+  const el=document.getElementById('mm-list');el.innerHTML='';
+  methods.forEach((m,i)=>{
+    const d=document.createElement('div');d.className='mm-item';
+    d.style.cursor='pointer';
+    d.title='クリックで編集';
+    const name=document.createElement('span');name.textContent=m;
+    const editBtn=document.createElement('button');
+    editBtn.className='mm-del';editBtn.title='編集';
+    editBtn.style.cssText='color:var(--blue-600);font-size:11px;padding:0 2px;';
+    editBtn.textContent='✎';
+    editBtn.onclick=ev=>{ev.stopPropagation();openMethodModal(i);};
+    d.onclick=()=>openMethodModal(i);
+    d.appendChild(name);d.appendChild(editBtn);
+    el.appendChild(d);
+  });
+}
+function openMethodModal(i){
+  editingMethodIdx=i;
+  document.getElementById('method-inp').value=methods[i];
+  document.getElementById('method-modal-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('method-inp').focus(),80);
+}
+function closeMethodModal(){
+  document.getElementById('method-modal-overlay').classList.remove('open');
+}
+function saveMethod(){
+  const v=document.getElementById('method-inp').value.trim();
+  if(!v)return;
+  if(methods.some((m,i)=>m===v&&i!==editingMethodIdx)){alert('同じ名前の点検方法が既にあります');return;}
+  methods[editingMethodIdx]=v;
+  closeMethodModal();renderMM();buildPills();renderLegend();
+}
+function deleteMethodFromModal(){
+  if(methods.length<=1){alert('点検方法は最低1つ必要です');return;}
+  if(!confirm('「'+methods[editingMethodIdx]+'」を削除しますか？'))return;
+  methods.splice(editingMethodIdx,1);
+  closeMethodModal();renderMM();buildPills();renderLegend();
+}
+function addMethod(){
+  const inp=document.getElementById('mm-input'),v=inp.value.trim();
+  if(!v||methods.includes(v))return;
+  methods.push(v);inp.value='';renderMM();buildPills();renderLegend();
+}
+function delMethod(i){
+  if(methods.length<=1)return;
+  methods.splice(i,1);renderMM();buildPills();renderLegend();
+}
+function addMFromModal(){
+  const inp=document.getElementById('m-new-m'),v=inp.value.trim();
+  if(!v||methods.includes(v))return;
+  methods.push(v);inp.value='';buildPills();renderMM();
+}
+
+/* ============================================================
+   モーダル
+   ============================================================ */
+function buildBizSel(selectedId){
+  const s=document.getElementById('m-biz');
+  s.innerHTML='';
+  bizList.forEach(biz=>{
+    const o=document.createElement('option');
+    o.value=biz.id;o.textContent=biz.name;
+    if(biz.id===selectedId)o.selected=true;
+    s.appendChild(o);
+  });
+}
+function onBizSel(){
+  // 業務変更時に橋梁リストを更新
+  buildBSelForBiz(document.getElementById('m-biz').value);
+  document.getElementById('binfo').style.display='none';
+}
+function buildBSel(){ buildBSelForBiz(currentBiz); }
+function buildBSelForBiz(bizId){
+  const biz=getBiz(bizId);
+  const s=document.getElementById('m-bridge');
+  s.innerHTML='<option value="">— 橋梁を選択してください —</option>';
+  if(biz) biz.bridges.forEach((b,i)=>{
+    const o=document.createElement('option');o.value=i;o.textContent=b.name+'　('+b.route+')';s.appendChild(o);
+  });
+}
+function buildPills(){
+  const c=document.getElementById('m-pills');
+  const sel=Array.from(c.querySelectorAll('.mpill.on')).map(p=>p.dataset.m);
+  c.innerHTML='';
+  methods.forEach(m=>{
+    const s=document.createElement('span');s.className='mpill'+(sel.includes(m)?' on':'');
+    s.textContent=m;s.dataset.m=m;s.onclick=()=>s.classList.toggle('on');c.appendChild(s);
+  });
+}
+function openAddModal(dateStr,bridgeIdx){
+  if(!currentBiz){alert('先に業務を選択してください');return;}
+  editIdx=-1;
+  document.getElementById('modal-ttl').textContent='点検を追加';
+  document.getElementById('del-btn').style.display='none';
+  buildBizSel(currentBiz);
+  buildBSelForBiz(currentBiz);
+  buildPills();
+  const ymS=getYmStart();
+  document.getElementById('m-date').value=dateStr||(ymS?ymS+'-01':'');
+  document.getElementById('m-bridge').value=(bridgeIdx!=null&&bridgeIdx>=0)?bridgeIdx:'';
+  onBSel();
+  document.getElementById('m-guide').value='2';
+  document.getElementById('m-reg').value='片側交互通行';
+
+  document.getElementById('reserve-btn').style.display='inline-block';
+  document.getElementById('del-reserve-btn').style.display='none';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function openEditModal(bizId,idx){
+  const biz=getBiz(bizId);if(!biz)return;
+  const e=biz.entries[idx];if(!e)return;
+  editIdx=idx;
+  document.getElementById('modal-ttl').textContent='点検を編集';
+  document.getElementById('del-btn').style.display='inline-block';
+  buildBizSel(bizId);
+  buildBSelForBiz(bizId);
+  buildPills();
+  document.getElementById('m-date').value=e.date;
+  document.getElementById('m-bridge').value=e.bridgeIdx>=0?e.bridgeIdx:'';
+  onBSel();
+  e.methods.forEach(m=>{document.querySelectorAll('#m-pills .mpill').forEach(p=>{if(p.dataset.m===m)p.classList.add('on');});});
+  document.getElementById('m-guide').value=e.guide;
+  document.getElementById('m-reg').value=e.reg;
+
+  // 予備日ボタン制御
+  const isRes=e.reserve===true;
+  document.getElementById('reserve-btn').style.display=isRes?'none':'inline-block';
+  document.getElementById('del-reserve-btn').style.display=isRes?'inline-block':'none';
+  if(isRes) document.getElementById('del-btn').style.display='none';
+  // 業務変更に備えてbizIdを保持
+  document.getElementById('modal-overlay').dataset.bizId=bizId;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
+function onBSel(){
+  const v=document.getElementById('m-bridge').value;
+  const box=document.getElementById('binfo');
+  if(v===''){box.style.display='none';return;}
+  const bizId=document.getElementById('m-biz').value;
+  const biz=getBiz(bizId);
+  const b=biz?biz.bridges[parseInt(v)]:null;
+  if(!b){box.style.display='none';return;}
+  box.style.display='block';
+  box.innerHTML='路線名：'+b.route+'　｜　橋長/施設延長：'+fmt1(b.length)+'m　｜　幅員：'+fmt1(b.width)+'m　｜　径間数：'+b.spans+'径間'+(b.address?'<br>所在地：'+b.address:'')+(b.year?'　｜　架設：'+b.year+'年':'');
+}
+function saveEntry(){
+  const bizId=document.getElementById('m-biz').value;
+  const biz=getBiz(bizId);if(!biz){alert('業務を選択してください');return;}
+  const selM=Array.from(document.querySelectorAll('#m-pills .mpill.on')).map(p=>p.dataset.m);
+  const bidx=document.getElementById('m-bridge').value;
+  const entry={
+    date:document.getElementById('m-date').value,
+    bridgeIdx:bidx===''?-1:parseInt(bidx),
+    methods:selM.length?selM:[methods[0]],
+    guide:document.getElementById('m-guide').value,
+    reg:document.getElementById('m-reg').value,
+    place:(editIdx>=0&&biz.entries[editIdx])?biz.entries[editIdx].place||'':'',
+    note:(editIdx>=0&&biz.entries[editIdx])?biz.entries[editIdx].note||'':'',
+    durDays:1
+  };
+  if(!entry.date){alert('日付を入力してください');return;}
+  // 業務が変わっていた場合は旧業務から削除
+  const origBizId=document.getElementById('modal-overlay').dataset.bizId;
+  if(editIdx>=0&&origBizId&&origBizId!==bizId){
+    const origBiz=getBiz(origBizId);
+    if(origBiz) origBiz.entries.splice(editIdx,1);
+    biz.entries.push(entry);
+  } else if(editIdx>=0){
+    biz.entries[editIdx]=entry;
+  } else {
+    biz.entries.push(entry);
+  }
+  biz.entries.sort((a,b)=>a.date.localeCompare(b.date));
+  closeModal();renderAll();
+}
+function deleteEntry(){
+  const bizId=document.getElementById('modal-overlay').dataset.bizId||currentBiz;
+  const biz=getBiz(bizId);if(!biz)return;
+  if(!confirm('この点検を削除しますか？'))return;
+  biz.entries.splice(editIdx,1);closeModal();renderAll();
+}
+function saveReserve(){
+  if(!currentBiz){alert('先に業務を選択してください');return;}
+  const bizId=document.getElementById('m-biz').value||currentBiz;
+  const biz=getBiz(bizId);if(!biz)return;
+  const date=document.getElementById('m-date').value;
+  if(!date){alert('日付を入力してください');return;}
+  const entry={date,bridgeIdx:-1,methods:[],guide:'',reg:'',place:'',note:'',durDays:1,reserve:true};
+  biz.entries.push(entry);
+  biz.entries.sort((a,b)=>a.date.localeCompare(b.date));
+  closeModal();renderAll();
+}
+function deleteReserve(){
+  const bizId=document.getElementById('modal-overlay').dataset.bizId||currentBiz;
+  const biz=getBiz(bizId);if(!biz)return;
+  if(!confirm('予備日を削除しますか？'))return;
+  biz.entries.splice(editIdx,1);closeModal();renderAll();
+}
+
+/* ============================================================
+   集合場所・備考 専用ポップアップ
+   ============================================================ */
+let placeModalBizId=null,placeModalIdx=-1,placeModalField=null;
+
+function openPlaceModal(bizId,idx,field){
+  placeModalBizId=bizId;placeModalIdx=idx;placeModalField=field;
+  const biz=getBiz(bizId);if(!biz)return;
+  const e=biz.entries[idx];if(!e)return;
+  const isPlace=field==='place';
+  document.getElementById('place-modal-ttl').textContent=isPlace?'集合場所を編集':'備考を編集';
+  document.getElementById('place-frow').style.display=isPlace?'':'none';
+  document.getElementById('note-frow').style.display=isPlace?'none':'';
+  document.getElementById('place-inp').value=e.place||'';
+  document.getElementById('note-inp').value=e.note||'';
+  document.getElementById('place-modal-overlay').classList.add('open');
+  setTimeout(()=>{
+    if(isPlace) document.getElementById('place-inp').focus();
+    else document.getElementById('note-inp').focus();
+  },80);
+}
+function closePlaceModal(){
+  document.getElementById('place-modal-overlay').classList.remove('open');
+}
+function savePlaceNote(){
+  const biz=getBiz(placeModalBizId);if(!biz)return;
+  const e=biz.entries[placeModalIdx];if(!e)return;
+  if(placeModalField==='place'){
+    e.place=document.getElementById('place-inp').value.trim();
+  } else {
+    e.note=document.getElementById('note-inp').value.trim();
+  }
+  closePlaceModal();renderSchedule();renderSummary();
+}
+function clearPlaceNote(){
+  if(!confirm('内容をクリアしますか？'))return;
+  const biz=getBiz(placeModalBizId);if(!biz)return;
+  const e=biz.entries[placeModalIdx];if(!e)return;
+  if(placeModalField==='place') e.place='';
+  else e.note='';
+  closePlaceModal();renderSchedule();renderSummary();
+}
+
+/* ============================================================
+   凡例・サマリー
+   ============================================================ */
+const LC={"BT-200":"#B5D4F4","高所作業車":"#FEF3E2"};
+function renderLegend(){
+  document.getElementById('legend-row').innerHTML=methods.map(m=>
+    '<div class="leg-item"><div class="leg-dot" style="background:'+(LC[m]||'#D3D1C7')+'"></div>'+m+'</div>'
+  ).join('');
+}
+function renderSummary(){
+  const yms=getYmRange();
+  const biz=curBiz();if(!biz)return;
+  const me=biz.entries.filter(e=>yms.some(ym=>e.date.startsWith(ym)));
+  let tg=0;const mc={};
+  me.forEach(e=>{e.methods.forEach(m=>{mc[m]=(mc[m]||0)+1;});const n=parseInt(e.guide);if(!isNaN(n))tg+=n;});
+  const topM=Object.entries(mc).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('summary-grid').innerHTML=`
+    <div class="sum-card"><div class="sum-label">業務名</div><div class="sum-val" style="font-size:14px">${biz.name}</div></div>
+    <div class="sum-card"><div class="sum-label">点検日数</div><div class="sum-val">${(()=>{const ds=new Set();me.filter(e=>!e.reserve).forEach(e=>{const dur=Math.max(1,e.durDays||1);const start=new Date(e.date);for(let i=0;i<dur;i++){const d=new Date(start);d.setDate(d.getDate()+i);ds.add(d.toISOString().slice(0,10));}});return ds.size;})()}<span class="sum-unit">日</span></div></div>
+    <div class="sum-card"><div class="sum-label">点検橋梁数</div><div class="sum-val">${new Set(me.map(e=>e.bridgeIdx)).size}<span class="sum-unit">橋</span></div></div>
+    <div class="sum-card"><div class="sum-label">延べ誘導員</div><div class="sum-val">${tg}<span class="sum-unit">名</span></div></div>
+    <div class="sum-card"><div class="sum-label">登録橋梁数</div><div class="sum-val">${biz.bridges.length}<span class="sum-unit">件</span></div></div>
+  `;
+}
+
+/* ============================================================
+   renderAll
+   ============================================================ */
+/* 印刷範囲制御 */
+function printSchedule(){
+  const biz=curBiz();
+  let dates=[];
+  if(biz&&biz.entries.length){
+    dates=biz.entries.map(e=>e.date).sort();
+  }
+
+  const addedClasses=[];
+  if(dates.length){
+    const firstDate=dates[0];
+    const lastDate=dates[dates.length-1];
+    const firstYm=firstDate.slice(0,7);
+    const lastYm=lastDate.slice(0,7);
+
+    // 月セクション：最初の点検月〜最後の点検月の範囲外を非表示
+    // 範囲内の月はたとえ点検が0件でも表示（中間月を含む）
+    document.querySelectorAll('.month-section').forEach(sec=>{
+      const tbody=sec.querySelector('tbody');
+      const ym=tbody?tbody.id.replace('tbl-body-',''):'';
+      if(!ym) return;
+      if(ym<firstYm||ym>lastYm){
+        sec.classList.add('print-hide');
+        addedClasses.push(()=>sec.classList.remove('print-hide'));
+      }
+    });
+
+    // no-entry行：
+    // ・最初の点検日より前の日 → 非表示
+    // ・最後の点検日より後の日 → 非表示
+    // ・最初と最後の間の空白日 → 表示（印刷対象）
+    document.querySelectorAll('tr.no-entry').forEach(tr=>{
+      const dc=tr.querySelector('.dc');
+      if(!dc)return;
+      const tbody=tr.closest('tbody');
+      if(!tbody)return;
+      const ym=tbody.id.replace('tbl-body-','');
+      const dayNum=parseInt(dc.textContent);
+      const ds=ym+'-'+(dayNum<10?'0':'')+dayNum;
+      if(ds<firstDate||ds>lastDate){
+        tr.classList.add('print-hide');
+        addedClasses.push(()=>tr.classList.remove('print-hide'));
+      }
+      // ds が firstDate〜lastDate の範囲内なら印刷する（何もしない）
+    });
+  } else {
+    // データが0件の場合は全て非表示
+    document.querySelectorAll('.month-section').forEach(sec=>{
+      sec.classList.add('print-hide');
+      addedClasses.push(()=>sec.classList.remove('print-hide'));
+    });
+  }
+
+  window.print();
+  setTimeout(()=>addedClasses.forEach(fn=>fn()), 500);
+}
+
+function renderAll(){
+  if(!currentBiz){ renderBizBar(); return; }
+  renderSummary();renderLegend();renderSchedule();
+  if(currentTab==='gantt') renderGantt();
+  saveToDb();
+}
+
+/* ============================================================
+   スケジュールテーブル（現在選択中の業務のみ）
+   ============================================================ */
+function renderSchedule(){
+  const biz=curBiz();
+  const sc=document.getElementById('schedule-content');
+  if(!biz){sc.innerHTML='';return;}
+  const yms=getYmRange();
+  if(!yms.length){sc.innerHTML='';return;}
+
+  const csvNote='<p style="font-size:10px;color:var(--text3);margin-bottom:6px;padding:0 2px">'
+    +'※ 路線名・橋長/施設延長・幅員・径間数はCSVより自動表示</p>';
+
+  // 月ごとにテーブルを生成して縦に連結
+  let html='<div class="pad">'+csvNote;
+
+  yms.forEach((ym,ymIdx)=>{
+    const [y,mo]=ym.split('-').map(Number);
+    const total=new Date(y,mo,0).getDate();
+    const monthLabel=y+'年'+mo+'月';
+
+    html+='<div class="month-section">'
+      +'<div class="month-heading">'+monthLabel+'</div>'
+      +'<div class="tbl-wrap"><table>'
+      +'<thead><tr>'
+      +'<th style="width:44px">日付</th>'
+      +'<th style="width:28px">曜</th>'
+      +'<th style="width:140px">橋梁名</th>'
+      +'<th style="width:108px">路線名</th>'
+      +'<th style="width:52px">橋長/<br>施設延長</th>'
+      +'<th style="width:46px">幅員</th>'
+      +'<th style="width:52px">径間数</th>'
+      +'<th style="width:130px">点検方法</th>'
+      +'<th style="width:58px">誘導員数</th>'
+      +'<th style="width:96px">規制方法</th>'
+      +'<th style="width:160px">集合場所</th>'
+      +'<th style="width:110px">備考</th>'
+      +'</tr></thead>'
+      +'<tbody id="tbl-body-'+ym+'"></tbody>'
+      +'</table></div></div>';
+  });
+
+  html+='</div>';
+  sc.innerHTML=html;
+
+  // 各月のtbodyを埋める
+  yms.forEach(ym=>{
+    const [y,mo]=ym.split('-').map(Number);
+    const total=new Date(y,mo,0).getDate();
+    const tbody=document.getElementById('tbl-body-'+ym);
+    if(!tbody)return;
+
+    for(let d=1;d<=total;d++){
+      const ds=ym+'-'+(d<10?'0'+d:d);
+      const dow=new Date(y,mo-1,d).getDay();
+      const isWE=dow===0||dow===6;
+      const isHolDay=isHoliday(ds)&&!isWE;
+      const de=biz.entries.filter(e=>{
+        if(e.reserve) return e.date===ds;
+        const dur=Math.max(1,e.durDays||1);
+        if(dur===1) return e.date===ds;
+        // 複数日スパン：開始日からdur日間に含まれるか判定
+        const start=new Date(e.date);
+        const target=new Date(ds);
+        const end=new Date(start);
+        end.setDate(end.getDate()+dur-1);
+        return target>=start&&target<=end;
+      });
+
+      de.forEach((e,ei)=>{
+        const idx=biz.entries.indexOf(e);
+        // 予備日エントリ
+        if(e.reserve===true){
+          const tr=document.createElement('tr');
+          tr.classList.add('reserve-row');
+          if(isWE)tr.classList.add('holiday');
+          const tdD=document.createElement('td');tdD.className='dc';
+          tdD.style.cssText='vertical-align:middle;border-bottom:0.5px solid var(--border2);';
+          tdD.textContent=d+'日';tr.appendChild(tdD);
+          const tdW=document.createElement('td');tdW.className='wc';
+          tdW.style.cssText='vertical-align:middle;border-bottom:0.5px solid var(--border2);';
+          tdW.textContent='('+DAYS[dow]+')';tr.appendChild(tdW);
+          const tdR=document.createElement('td');tdR.colSpan=10;
+          tdR.style.cssText='text-align:center;vertical-align:middle;cursor:pointer;';
+          tdR.innerHTML='<span class="reserve-badge">予備日</span>';
+          tdR.onclick=()=>openEditModal(biz.id,idx);
+          tr.appendChild(tdR);tbody.appendChild(tr);
+          return;
+        }
+        const b=(e.bridgeIdx>=0&&biz.bridges[e.bridgeIdx])?biz.bridges[e.bridgeIdx]:null;
+        const tr=document.createElement('tr');
+        if(isWE)tr.classList.add('holiday');
+        if(dow===6)tr.classList.add('wsat');
+        if(dow===0)tr.classList.add('wsun');
+        if(isHolDay)tr.classList.add('holiday-day');
+        if(ei>0)tr.classList.add('cont');
+        if(ei===0){
+          const rc=Math.max(1,de.length);
+          const tdD=document.createElement('td');tdD.className='dc';tdD.rowSpan=rc;
+          tdD.style.cssText='vertical-align:top;padding-top:7px;border-bottom:0.5px solid var(--border2);';
+          tdD.textContent=d+'日';tr.appendChild(tdD);
+          const tdW=document.createElement('td');tdW.className='wc';tdW.rowSpan=rc;
+          tdW.style.cssText='vertical-align:top;padding-top:7px;border-bottom:0.5px solid var(--border2);';
+          tdW.textContent=isHolDay?'(祝)':'('+DAYS[dow]+')';tr.appendChild(tdW);
+        }
+        // 橋梁名セル
+        const isStartDay=(e.date===ds);
+        const tdB=document.createElement('td');
+        tdB.style.cssText='font-weight:'+(isStartDay?'700':'400')+';font-size:12px;'
+          +'color:'+(isStartDay?'var(--text)':'var(--text3)')+';'
+          +'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;cursor:pointer;';
+        if(isStartDay){
+          tdB.textContent=b?b.name:'（橋梁未設定）';
+        } else {
+          // 継続日：折り返しマーク（大きめ）＋薄い橋梁名
+          const mark=document.createElement('span');
+          mark.textContent='↳';
+          mark.style.cssText='font-size:15px;color:var(--text3);margin-right:4px;vertical-align:middle;line-height:1;';
+          const nameSpan=document.createElement('span');
+          nameSpan.textContent=b?b.name:'（橋梁未設定）';
+          nameSpan.style.cssText='opacity:0.5;';
+          tdB.appendChild(mark);tdB.appendChild(nameSpan);
+        }
+        tdB.onclick=()=>openEditModal(biz.id,idx);
+        tr.appendChild(tdB);
+        // 点検方法セル（誘導員数の左）
+        const tdM=document.createElement('td');
+        tdM.style.cssText='text-align:center;cursor:pointer;vertical-align:middle;overflow:hidden;';
+        const mWrap=document.createElement('div');
+        // 縮小フィット：スケールで全体を縮める
+        mWrap.style.cssText='display:flex;flex-direction:row;flex-wrap:nowrap;gap:2px;justify-content:center;align-items:center;'
+          +'transform-origin:center center;white-space:nowrap;';
+        e.methods.forEach((m,mi)=>{
+          if(mi>0){
+            const sep=document.createElement('span');
+            sep.textContent='/';
+            sep.style.cssText='font-size:10px;color:var(--text3);font-weight:400;flex-shrink:0;';
+            mWrap.appendChild(sep);
+          }
+          const sp=document.createElement('span');
+          sp.className='btag '+tc(m);
+          sp.textContent=m;
+          sp.style.flexShrink='0';
+          mWrap.appendChild(sp);
+        });
+        tdM.appendChild(mWrap);
+        // 縮小フィット：コンテンツ幅がセル幅を超えたらscale
+        requestAnimationFrame(()=>{
+          const cw=tdM.clientWidth-4;
+          const mw=mWrap.scrollWidth;
+          if(mw>cw&&cw>0) mWrap.style.transform='scaleX('+(cw/mw)+')';
+        });
+        tdM.onclick=()=>openEditModal(biz.id,idx);
+        const mk=(v,s)=>{const t=document.createElement('td');if(s)t.style.cssText=s;t.textContent=v||'—';return t;};
+        const s='font-size:11px;color:var(--text2);';
+        tr.appendChild(mk(b?b.route:'—',s+'max-width:108px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'));
+        tr.appendChild(mk(b?fmt1(b.length)+'m':'—',s+'text-align:center;white-space:nowrap;'));
+        tr.appendChild(mk(b?fmt1(b.width)+'m':'—',s+'text-align:center;white-space:nowrap;'));
+        tr.appendChild(mk(b?b.spans+'径間':'—',s+'text-align:center;white-space:nowrap;'));
+        tr.appendChild(tdM);
+        tr.appendChild(mk(e.guide,'font-size:11px;text-align:center;'));
+        tr.appendChild(mk(e.reg,'font-size:11px;text-align:center;'));
+        // 集合場所セル
+        const tdPlace=document.createElement('td');
+        tdPlace.style.cssText='font-size:11px;cursor:pointer;';
+        const placeWrap=document.createElement('div');
+        placeWrap.style.cssText='display:flex;align-items:center;gap:4px;justify-content:center;';
+        const placeText=document.createElement('span');placeText.textContent=e.place||'';
+        placeText.style.cssText='flex:1;text-align:center;';
+        const placeIcon=document.createElement('span');placeIcon.textContent='✎';
+        placeIcon.style.cssText='font-size:9px;color:var(--text3);opacity:0;transition:opacity 0.15s;flex-shrink:0;';
+        placeWrap.appendChild(placeText);placeWrap.appendChild(placeIcon);
+        tdPlace.appendChild(placeWrap);
+        tdPlace.onmouseenter=()=>placeIcon.style.opacity='1';
+        tdPlace.onmouseleave=()=>placeIcon.style.opacity='0';
+        tdPlace.onclick=()=>openPlaceModal(biz.id,idx,'place');
+        tr.appendChild(tdPlace);
+        // 備考セル
+        const tdNote=document.createElement('td');
+        tdNote.style.cssText='font-size:11px;cursor:pointer;';
+        const noteWrap=document.createElement('div');
+        noteWrap.style.cssText='display:flex;align-items:center;gap:4px;justify-content:center;';
+        const noteText=document.createElement('span');noteText.textContent=e.note||'';
+        noteText.style.cssText='flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90px;';
+        const noteIcon=document.createElement('span');noteIcon.textContent='✎';
+        noteIcon.style.cssText='font-size:9px;color:var(--text3);opacity:0;transition:opacity 0.15s;flex-shrink:0;';
+        noteWrap.appendChild(noteText);noteWrap.appendChild(noteIcon);
+        tdNote.appendChild(noteWrap);
+        tdNote.onmouseenter=()=>noteIcon.style.opacity='1';
+        tdNote.onmouseleave=()=>noteIcon.style.opacity='0';
+        tdNote.onclick=()=>openPlaceModal(biz.id,idx,'note');
+        tr.appendChild(tdNote);
+        tbody.appendChild(tr);
+      });
+
+      if(de.length===0){
+        const tr=document.createElement('tr');
+        tr.classList.add('no-entry');
+        if(isWE)tr.classList.add('holiday');
+        if(dow===6)tr.classList.add('wsat');if(dow===0)tr.classList.add('wsun');
+        if(isHolDay)tr.classList.add('holiday-day');
+        const tdD=document.createElement('td');tdD.className='dc';tdD.textContent=d+'日';
+        const tdW=document.createElement('td');tdW.className='wc';tdW.textContent=isHolDay?'(祝)':'('+DAYS[dow]+')';
+        const tdB=document.createElement('td');
+        const ab=document.createElement('button');ab.className='add-btn';ab.textContent='＋ 点検を追加';
+        ab.onclick=()=>openAddModal(ds,null);tdB.appendChild(ab);
+        tr.append(tdD,tdW,tdB);
+        for(let i=0;i<9;i++){
+          const t=document.createElement('td');t.textContent='';
+          tr.appendChild(t);
+        }
+        tbody.appendChild(tr);
+      } else {
+        const tr=document.createElement('tr');tr.classList.add('add-row');
+        if(isWE)tr.classList.add('holiday');
+        tr.style.borderBottom='0.5px solid var(--border2)';
+        const td=document.createElement('td');td.colSpan=9;
+        const ab=document.createElement('button');ab.className='add-btn';ab.textContent='＋ この日に追加';
+        ab.onclick=()=>openAddModal(ds,null);td.appendChild(ab);tr.appendChild(td);tbody.appendChild(tr);
+      }
+    }
+  });
+}
+
+/* ============================================================
+   バーチャート（全業務を縦に並べる）
+   ============================================================ */
+function ganttAllRows(){
+  // 全業務を走査して業務区切り+橋梁行を作る
+  const rows=[];
+  bizList.forEach(biz=>{
+    rows.push({type:'sep',bizId:biz.id,name:biz.name});
+    if(biz.bridges.length>0){
+      biz.bridges.forEach((b,bi)=>rows.push({type:'bridge',bizId:biz.id,bi,name:b.name}));
+    } else {
+      // bridgesなしでentriesにある橋梁idのみ
+      const ids=[...new Set(biz.entries.map(e=>e.bridgeIdx).filter(i=>i>=0))];
+      if(ids.length===0) rows.push({type:'bridge',bizId:biz.id,bi:-1,name:'（橋梁未登録）'});
+      else ids.forEach(bi=>rows.push({type:'bridge',bizId:biz.id,bi,name:'橋梁'+bi}));
+    }
+  });
+  return rows;
+}
+
+function renderGantt(){
+  const yms=getYmRange();if(!yms.length)return;
+  const ym=yms[0];
+  const rows=ganttAllRows();
+  // 全期間の日数を計算
+  let totalDays=0;
+  const ymMeta=yms.map(y=>{
+    const [yr,mo]=y.split('-').map(Number);
+    const days=new Date(yr,mo,0).getDate();
+    totalDays+=days;
+    return{ym:y,yr,mo,days};
+  });
+  const [y,mo]=ym.split('-').map(Number);
+  const total=totalDays;
+
+  // 左列はボディのtr内で生成するため不要
+
+  // ヘッダー
+  const gh=document.getElementById('g-head');gh.innerHTML='';
+  // 月ラベル行
+  const mr=document.createElement('div');mr.className='g-month-row';
+  ymMeta.forEach(({yr,mo:m,days})=>{
+    const mc=document.createElement('div');mc.className='g-month-cell';
+    mc.style.width=(days*CW)+'px';mc.style.borderRight='1.5px solid var(--border3)';
+    mc.textContent=yr+'年'+m+'月';mr.appendChild(mc);
+  });
+  gh.appendChild(mr);
+  // 日行
+  const dr=document.createElement('div');dr.className='g-day-row';
+  ymMeta.forEach(({yr,mo:m,days,ym:curYm})=>{
+    for(let d=1;d<=days;d++){
+      const dow=new Date(yr,m-1,d).getDay();
+      const c=document.createElement('div');
+      const ds0=curYm+'-'+(d<10?'0'+d:d);
+      const isHol0=isHoliday(ds0)&&dow!==0&&dow!==6;
+      c.className='g-day'+(dow===6?' sat':dow===0?' sun':isHol0?' hol':'');
+      if(d===days)c.style.borderRight='1.5px solid var(--border3)';
+      c.innerHTML='<span class="g-day-n">'+d+'</span><span class="g-day-w">'+(isHol0?'祝':DAYS[dow])+'</span>';
+      dr.appendChild(c);
+    }
+  });
+  gh.appendChild(dr);
+
+  // ボディ — table の tbody に tr を追加
+  const gb=document.getElementById('g-body');
+  gb.innerHTML='';
+  // バーレイヤーは gantt-th-calendar 内の relative コンテナに変更
+  const calendarTh=document.getElementById('g-head');
+  let bl=document.getElementById('bar-layer');
+  if(!bl){
+    bl=document.createElement('div');
+    bl.id='bar-layer';
+    bl.className='bar-layer';
+  }
+
+  rows.forEach((r,ri)=>{
+    const tr=document.createElement('tr');
+    // 左列：橋梁名セル
+    const tdName=document.createElement('td');
+    tdName.className='gantt-td-name'+(r.type==='sep'?' biz-sep':'');
+    tdName.textContent=r.name;
+    if(r.type!=='sep') tdName.title=r.name;
+    tr.appendChild(tdName);
+    // 右列：グリッドセル
+    const tdGrid=document.createElement('td');
+    tdGrid.className='gantt-td-grid'+(r.type==='sep'?' biz-sep':'');
+    tdGrid.style.position='relative';
+    if(r.type!=='sep'){
+      // セルを配置
+      const rowDiv=document.createElement('div');
+      rowDiv.style.cssText='display:flex;height:36px;';
+      ymMeta.forEach(({yr,mo:m,days,ym:curYm})=>{
+        for(let d=1;d<=days;d++){
+          const dow=new Date(yr,m-1,d).getDay();
+          const c=document.createElement('div');
+          const isHolCell=isHoliday(curYm+'-'+(d<10?'0'+d:d))&&dow!==0&&dow!==6;
+          c.className='g-cell'+(dow===6?' sat':dow===0?' sun':isHolCell?' hol':'');
+          if(d===days)c.style.borderRight='1.5px solid var(--border3)';
+          const ds=curYm+'-'+(d<10?'0'+d:d);
+          c.dataset.ds=ds;c.dataset.ri=ri;c.dataset.bizId=r.bizId;c.dataset.bi=r.bi;
+          c.addEventListener('click',onCellClick);
+          rowDiv.appendChild(c);
+        }
+      });
+      tdGrid.appendChild(rowDiv);
+    } else {
+      tdGrid.style.width=(total*CW)+'px';
+    }
+    tr.appendChild(tdGrid);
+    gb.appendChild(tr);
+  });
+
+  // バーレイヤーを tbody の上に absolute で重ねる
+  // gantt-outer を position:relative にして配置
+  const tableEl=document.getElementById('gantt-table');
+  tableEl.style.position='relative';
+  bl.style.cssText='position:absolute;top:56px;left:var(--name-w);right:0;bottom:0;pointer-events:none;z-index:5;';
+  tableEl.appendChild(bl);
+
+  renderBars(rows,yms,ymMeta,total);
+}
+
+function renderBars(rows,yms,ymMeta,total){
+  const ym=yms[0];
+  const [y,mo]=ym.split('-').map(Number);
+  const bl=document.getElementById('bar-layer');bl.innerHTML='';
+
+  // 今日ライン
+  const today=new Date();
+  let todayOffset=0,foundToday=false;
+  for(const {yr,mo:m,days,ym:curYm} of ymMeta){
+    if(today.getFullYear()===yr&&today.getMonth()===m-1){
+      todayOffset+=today.getDate()-1;
+      foundToday=true;break;
+    }
+    todayOffset+=days;
+  }
+  if(foundToday){
+    const tl=document.createElement('div');tl.className='today-line';
+    tl.style.left=((todayOffset+0.5)*CW)+'px';
+    const tlH=rows.reduce((s,r)=>s+(r.type==='sep'?28:36),0);
+    tl.style.height=tlH+'px';
+    bl.appendChild(tl);
+  }
+
+  // 予備日バーを描画（全橋梁行にまたがる縦の帯）
+  // 業務ごとにまとめて処理
+  const bizReserveMap={};
+  rows.forEach((r,ri)=>{
+    if(r.type==='sep') return;
+    const biz=getBiz(r.bizId);if(!biz)return;
+    if(!bizReserveMap[r.bizId]){
+      bizReserveMap[r.bizId]={biz,firstRi:ri,lastRi:ri};
+    } else {
+      bizReserveMap[r.bizId].lastRi=ri;
+    }
+  });
+  Object.values(bizReserveMap).forEach(({biz,firstRi,lastRi})=>{
+    biz.entries.filter(e=>e.reserve===true&&yms.some(ym=>e.date.startsWith(ym))).forEach(e=>{
+      const idx=biz.entries.indexOf(e);
+      let colOffset=0;
+      for(const {ym:curYm,days} of ymMeta){
+        if(e.date.startsWith(curYm)){colOffset+=parseInt(e.date.split('-')[2])-1;break;}
+        colOffset+=days;
+      }
+      let topPx=0;
+      for(let i=0;i<firstRi;i++) topPx+=rows[i].type==='sep'?28:36;
+      let heightPx=0;
+      for(let i=firstRi;i<=lastRi;i++) heightPx+=rows[i].type==='sep'?28:36;
+      const bar=document.createElement('div');bar.className='gbar-reserve';
+      bar.style.cssText=
+        'left:'+(colOffset*CW+1)+'px;'
+        +'top:'+topPx+'px;'
+        +'width:'+(CW-2)+'px;'
+        +'height:'+heightPx+'px;';
+      const lbl=document.createElement('span');lbl.className='gbar-reserve-lbl';
+      lbl.textContent='予備日';
+      bar.appendChild(lbl);
+      bar.addEventListener('click',()=>openEditModal(biz.id,idx));
+      const delBtn=document.createElement('div');delBtn.className='gbar-del';
+      delBtn.textContent='×';
+      delBtn.addEventListener('click',ev=>{
+        ev.stopPropagation();
+        if(confirm('予備日を削除しますか？')){biz.entries.splice(idx,1);renderAll();}
+      });
+      bar.appendChild(delBtn);
+      bl.appendChild(bar);
+    });
+  });
+
+  // 全業務のentriesをバーとして描画
+  rows.forEach((r,ri)=>{
+    if(r.type==='sep') return;
+    const biz=getBiz(r.bizId);if(!biz)return;
+    biz.entries.filter(e=>{
+      return yms.some(ym=>e.date.startsWith(ym))&&e.bridgeIdx===r.bi&&!e.reserve;
+    }).forEach(e=>{
+      const idx=biz.entries.indexOf(e);
+      // 期間先頭からの列オフセットを計算
+      let colOffset=0;
+      for(const {ym:curYm,days} of ymMeta){
+        if(e.date.startsWith(curYm)){colOffset+=parseInt(e.date.split('-')[2])-1;break;}
+        colOffset+=days;
+      }
+      const d=colOffset;
+      const dur=Math.max(1,e.durDays||1);
+      const p=pal(r.bi>=0?r.bi:0);
+      // 累積top計算：sep=28px, bridge=36px
+      let topPx=0;
+      for(let i=0;i<ri;i++){
+        topPx+=rows[i].type==='sep'?28:36;
+      }
+      const barH=26;
+      const bar=document.createElement('div');bar.className='gbar';
+      bar.style.cssText='background:'+p.bg+';color:'+p.fg+';border:1px solid '+p.bd+';'
+        +'left:'+(d*CW+1)+'px;'
+        +'top:'+(topPx+Math.floor((36-barH)/2))+'px;'
+        +'width:'+(dur*CW-6)+'px;height:'+barH+'px;';
+      bar.dataset.bizId=r.bizId;bar.dataset.idx=idx;bar.dataset.ri=ri;bar.dataset.d=d;bar.dataset.dur=dur;
+
+      const lbl=document.createElement('span');lbl.className='gbar-lbl';
+      const b=r.bi>=0?biz.bridges[r.bi]:null;
+      lbl.textContent=(b?b.name:'')+(e.methods.length?' ['+e.methods[0]+']':'');
+      bar.appendChild(lbl);
+
+      const del=document.createElement('div');del.className='gbar-del';del.textContent='×';
+      del.addEventListener('click',ev=>{
+        ev.stopPropagation();
+        if(confirm('この点検を削除しますか？')){biz.entries.splice(idx,1);renderAll();}
+      });
+      bar.appendChild(del);
+
+      const lh=document.createElement('div');lh.className='gbar-handle L';
+      lh.addEventListener('mousedown',ev=>{ev.stopPropagation();startResize(ev,bar,'L',rows,ym,total);});
+      bar.appendChild(lh);
+      const rh=document.createElement('div');rh.className='gbar-handle R';
+      rh.addEventListener('mousedown',ev=>{ev.stopPropagation();startResize(ev,bar,'R',rows,ym,total);});
+      bar.appendChild(rh);
+
+      bar.addEventListener('mousedown',ev=>{
+        if(ev.target.classList.contains('gbar-handle')||ev.target===del)return;
+        startDrag(ev,bar,rows,ym,total);
+      });
+      bar.addEventListener('click',ev=>{
+        if(bar._moved||ev.target.classList.contains('gbar-handle')||ev.target===del)return;
+        openEditModal(r.bizId,idx);
+      });
+      bl.appendChild(bar);
+    });
+  });
+}
+
+function onCellClick(ev){
+  const c=ev.currentTarget;
+  const ds=c.dataset.ds;
+  const bi=parseInt(c.dataset.bi);
+  const bizId=c.dataset.bizId;
+  currentBiz=bizId;
+  renderBizBar();
+  openAddModal(ds,isNaN(bi)||bi<0?null:bi);
+}
+
+function startDrag(ev,bar,rows,ym,total){
+  ev.preventDefault();bar._moved=false;
+  const sx=ev.clientX,origL=parseInt(bar.style.left)||0;
+  const dur=parseInt(bar.dataset.dur)||1;
+  bar.classList.add('dragging');
+  function onM(e){
+    bar._moved=true;
+    let nl=origL+(e.clientX-sx);
+    nl=Math.round(nl/CW)*CW;
+    nl=Math.max(0,Math.min((total-dur)*CW,nl));
+    bar.style.left=nl+'px';
+  }
+  function onU(){
+    bar.classList.remove('dragging');
+    document.removeEventListener('mousemove',onM);document.removeEventListener('mouseup',onU);
+    if(!bar._moved)return;
+    const nd=Math.round(parseInt(bar.style.left)/CW)+1;
+    commitBarChange(bar.dataset.bizId,parseInt(bar.dataset.idx),nd,dur,ym,rows,parseInt(ym.split('-')[0]),parseInt(ym.split('-')[1]),total);
+    setTimeout(()=>{bar._moved=false;},10);
+  }
+  document.addEventListener('mousemove',onM);document.addEventListener('mouseup',onU);
+}
+
+function startResize(ev,bar,side,rows,ym,total){
+  ev.preventDefault();bar._moved=false;
+  const sx=ev.clientX,origL=parseInt(bar.style.left)||0,origW=parseInt(bar.style.width)||CW;
+  bar.classList.add('dragging');
+  function onM(e){
+    bar._moved=true;const dx=e.clientX-sx;
+    if(side==='R'){
+      let nw=origW+dx;nw=Math.round(nw/CW)*CW;nw=Math.max(CW,nw);
+      nw=Math.min(nw,(total-Math.round(origL/CW))*CW);
+      bar.style.width=nw+'px';bar.dataset.dur=Math.round(nw/CW);
+    } else {
+      let nl=origL+dx;nl=Math.round(nl/CW)*CW;nl=Math.max(0,nl);
+      let nw=origL+origW-nl;nw=Math.max(CW,nw);
+      bar.style.left=nl+'px';bar.style.width=nw+'px';bar.dataset.dur=Math.round(nw/CW);
+    }
+  }
+  function onU(){
+    bar.classList.remove('dragging');
+    document.removeEventListener('mousemove',onM);document.removeEventListener('mouseup',onU);
+    const nd=Math.round(parseInt(bar.style.left)/CW)+1;
+    const dur=parseInt(bar.dataset.dur)||1;
+    const [y,mo]=ym.split('-').map(Number);
+    commitBarChange(bar.dataset.bizId,parseInt(bar.dataset.idx),nd,dur,ym,rows,y,mo,total);
+    setTimeout(()=>{bar._moved=false;},10);
+  }
+  document.addEventListener('mousemove',onM);document.addEventListener('mouseup',onU);
+}
+
+function commitBarChange(bizId,idx,startDay,dur,ym,rows,y,mo,total){
+  const biz=getBiz(bizId);if(!biz||idx<0||idx>=biz.entries.length)return;
+  const d=Math.max(1,Math.min(startDay,total));
+  biz.entries[idx].date=ym+'-'+(d<10?'0'+d:d);
+  biz.entries[idx].durDays=dur;
+  biz.entries.sort((a,b)=>a.date.localeCompare(b.date));
+  renderSchedule();renderSummary();
+  const yms2=getYmRange();const ymMeta2=yms2.map(ym2=>{const [yr,mo]=ym2.split('-').map(Number);return{ym:ym2,yr,mo,days:new Date(yr,mo,0).getDate()};});
+  const total2=ymMeta2.reduce((s,m)=>s+m.days,0);
+  renderBars(ganttAllRows(),yms2,ymMeta2,total2);
+}
+
+/* ============================================================
+   初期化
+   ============================================================ */
+/* ============================================================
+   Supabase 連携
+   ▼ ここに Supabase の URL と anon key を設定してください ▼
+   ============================================================ */
+const SUPABASE_URL  = 'https://rrsbyiypwgnwzqadwpky.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyc2J5aXlwd2dud3pxYWR3cGt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5OTI4NjMsImV4cCI6MjA4OTU2ODg2M30.ZNc4AebnJkBzQFvcxW_Pv2TSEBncyeuapCHE5IAeJQg';
+
+let supabase = null;
+
+function openDbModal(){
+  // 埋め込み定数が設定済みならそれを表示、なければlocalStorageから
+  const url = (SUPABASE_URL && !SUPABASE_URL.includes('your-project'))
+    ? SUPABASE_URL : localStorage.getItem('sb_url')||'';
+  const key = (SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.includes('your-anon-key'))
+    ? SUPABASE_ANON_KEY : localStorage.getItem('sb_key')||'';
+  document.getElementById('db-url').value = url;
+  document.getElementById('db-key').value = key;
+  document.getElementById('db-modal-overlay').classList.add('open');
+}
+function closeDbModal(){ document.getElementById('db-modal-overlay').classList.remove('open'); }
+
+async function saveDbConfig(){
+  const url = document.getElementById('db-url').value.trim();
+  const key = document.getElementById('db-key').value.trim();
+  if(!url||!key){ alert('URLとKeyを入力してください'); return; }
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+  await initSupabase(url, key);
+  closeDbModal();
+}
+
+function clearDbConfig(){
+  if(!confirm('接続設定を削除しますか？')) return;
+  localStorage.removeItem('sb_url');
+  localStorage.removeItem('sb_key');
+  supabase = null;
+  updateDbStatus(false);
+  closeDbModal();
+}
+
+async function initSupabase(url, key){
+  try{
+    supabase = window.supabase.createClient(url, key);
+    // 接続テスト
+    const {error} = await supabase.from('biz_list').select('id').limit(1);
+    if(error && error.code !== 'PGRST116'){
+      console.warn('Supabase test:', error.message);
+    }
+    updateDbStatus(true);
+    await loadFromDb();
+  } catch(e){
+    console.error('Supabase init error:', e);
+    updateDbStatus(false);
+    alert('接続に失敗しました。URLとKeyを確認してください。\n' + e.message);
+  }
+}
+
+function updateDbStatus(connected){
+  const el = document.getElementById('db-status');
+  if(connected){
+    el.style.background = '#E1F5EE';
+    el.style.color = '#0F6E56';
+    el.textContent = '✓ DB接続中';
+  } else {
+    el.style.background = 'var(--surface2)';
+    el.style.color = 'var(--text3)';
+    el.textContent = '⚙ DB未接続';
+  }
+}
+
+/* ----- DB からの読み込み ----- */
+async function loadFromDb(){
+  if(!supabase) return;
+  try{
+    // 業務一覧
+    const {data:bizData, error:bizErr} = await supabase
+      .from('biz_list').select('*').order('created_at');
+    if(bizErr) throw bizErr;
+
+    // 橋梁・点検をまとめて取得
+    const bizIds = bizData.map(b=>b.id);
+    const {data:bridgeData} = await supabase
+      .from('bridges').select('*').in('biz_id', bizIds);
+    const {data:entryData} = await supabase
+      .from('entries').select('*').in('biz_id', bizIds).order('date');
+    const {data:methodData} = await supabase
+      .from('methods_config').select('*').limit(1);
+
+    // bizList に組み立て
+    bizList = bizData.map(b=>({
+      id: b.id,
+      name: b.name,
+      bridges: (bridgeData||[]).filter(br=>br.biz_id===b.id).map(br=>br.data),
+      entries: (entryData||[]).filter(e=>e.biz_id===b.id).map(e=>e.data)
+    }));
+
+    // 点検方法
+    if(methodData && methodData.length > 0){
+      methods = methodData[0].methods;
+    }
+
+    renderLegend();renderBizBar();
+    if(bizList.length > 0) selectBiz(bizList[0].id);
+  } catch(e){
+    console.error('loadFromDb error:', e);
+  }
+}
+
+/* ----- DB への保存 ----- */
+async function saveToDb(){
+  if(!supabase) return;
+  try{
+    for(const biz of bizList){
+      // 業務
+      await supabase.from('biz_list').upsert({id:biz.id, name:biz.name});
+      // 橋梁（1レコードにまとめる）
+      await supabase.from('bridges').upsert(
+        {biz_id:biz.id, data:biz.bridges},
+        {onConflict:'biz_id'}
+      );
+      // 点検データ（1レコードにまとめる）
+      await supabase.from('entries').upsert(
+        {biz_id:biz.id, data:biz.entries},
+        {onConflict:'biz_id'}
+      );
+    }
+    // 点検方法
+    await supabase.from('methods_config').upsert(
+      {id:'default', methods},
+      {onConflict:'id'}
+    );
+    // 保存インジケーター
+    const el = document.getElementById('db-status');
+    const orig = el.textContent;
+    el.textContent = '✓ 保存しました';
+    setTimeout(()=>{ el.textContent = orig; }, 1500);
+  } catch(e){
+    console.error('saveToDb error:', e);
+  }
+}
+
+/* ----- 業務削除をDBにも反映 ----- */
+async function deleteBizFromDb(bizId){
+  if(!supabase) return;
+  await supabase.from('entries').delete().eq('biz_id', bizId);
+  await supabase.from('bridges').delete().eq('biz_id', bizId);
+  await supabase.from('biz_list').delete().eq('id', bizId);
+}
+
+(function init(){
+  buildNendoSel();
+  const now=new Date();
+  const curNendo=now.getMonth()>=3?now.getFullYear():now.getFullYear()-1;
+  document.getElementById('ym-start').value=curNendo+'-04';
+  document.getElementById('ym-end').value=(curNendo+1)+'-03';
+  // 埋め込み設定で自動接続（未設定の場合はローカル動作）
+  const sbUrl = SUPABASE_URL && !SUPABASE_URL.includes('your-project')
+    ? SUPABASE_URL : localStorage.getItem('sb_url');
+  const sbKey = SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.includes('your-anon-key')
+    ? SUPABASE_ANON_KEY : localStorage.getItem('sb_key');
+  if(sbUrl && sbKey){
+    initSupabase(sbUrl, sbKey);
+  } else {
+    renderLegend();renderBizBar();
+  }
+})();
+</script>
+</body>
+</html>
