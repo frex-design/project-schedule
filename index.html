@@ -419,6 +419,25 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
     <div class="modal-body" style="overflow-y:auto;flex:1;padding:20px 22px;">
 
       <div class="guide-section">
+        <div class="guide-heading">📱 スマートフォンでの閲覧</div>
+        <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;padding:4px 0;">
+          <div style="flex-shrink:0;text-align:center;">
+            <canvas id="guide-qr" style="border-radius:8px;border:1px solid var(--border2);display:block;"></canvas>
+            <div style="font-size:10px;color:var(--text3);margin-top:6px;">QRコードを読み取る</div>
+          </div>
+          <div style="flex:1;min-width:200px;">
+            <div class="guide-table">
+              <div class="guide-row"><div class="guide-key">対応端末</div><div class="guide-val">iPhone / Android（ブラウザで開くだけ、インストール不要）</div></div>
+              <div class="guide-row"><div class="guide-key">スマホでできること</div><div class="guide-val">月間スケジュール表の閲覧・業務の切り替え・年度切り替え</div></div>
+              <div class="guide-row"><div class="guide-key">スマホではできないこと</div><div class="guide-val">点検の追加・編集・CSV読み込み・印刷・バーチャート工程表</div></div>
+              <div class="guide-row"><div class="guide-key">アクセス方法</div><div class="guide-val">左のQRコードをカメラで読み取るか、URLを直接入力してください</div></div>
+            </div>
+            <div id="guide-qr-url" style="margin-top:10px;font-size:10px;color:var(--text3);word-break:break-all;background:var(--surface2);border-radius:6px;padding:6px 8px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-section">
         <div class="guide-heading">🏢 業務の管理</div>
         <div class="guide-table">
           <div class="guide-row"><div class="guide-key">＋ 業務追加</div><div class="guide-val">新しい業務（現場）を登録します。業務名を入力して「登録」を押してください。</div></div>
@@ -475,25 +494,6 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
           <div class="guide-row"><div class="guide-key">橋長/施設延長</div><div class="guide-val">橋長・施設延長・延長・トンネル長・施設長</div></div>
           <div class="guide-row"><div class="guide-key">幅員</div><div class="guide-val">幅員</div></div>
           <div class="guide-row"><div class="guide-key">径間数</div><div class="guide-val">径間数・径間</div></div>
-        </div>
-      </div>
-
-      <div class="guide-section">
-        <div class="guide-heading">📱 スマートフォンでの閲覧</div>
-        <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;padding:4px 0;">
-          <div style="flex-shrink:0;text-align:center;">
-            <canvas id="guide-qr" style="border-radius:8px;border:1px solid var(--border2);display:block;"></canvas>
-            <div style="font-size:10px;color:var(--text3);margin-top:6px;">QRコードを読み取る</div>
-          </div>
-          <div style="flex:1;min-width:200px;">
-            <div class="guide-table">
-              <div class="guide-row"><div class="guide-key">対応端末</div><div class="guide-val">iPhone / Android（ブラウザで開くだけ、インストール不要）</div></div>
-              <div class="guide-row"><div class="guide-key">スマホでできること</div><div class="guide-val">月間スケジュール表の閲覧・業務の切り替え・年度切り替え</div></div>
-              <div class="guide-row"><div class="guide-key">スマホではできないこと</div><div class="guide-val">点検の追加・編集・CSV読み込み・印刷・バーチャート工程表</div></div>
-              <div class="guide-row"><div class="guide-key">アクセス方法</div><div class="guide-val">左のQRコードをカメラで読み取るか、URLを直接入力してください</div></div>
-            </div>
-            <div id="guide-qr-url" style="margin-top:10px;font-size:10px;color:var(--text3);word-break:break-all;background:var(--surface2);border-radius:6px;padding:6px 8px;"></div>
-          </div>
         </div>
       </div>
 
