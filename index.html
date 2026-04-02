@@ -350,6 +350,17 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
   }
   @page{margin:15mm 12mm 15mm 12mm;size:A3 landscape;}
 }
+
+/* 操作ガイド */
+.guide-section{margin-bottom:22px;}
+.guide-heading{font-size:12px;font-weight:800;color:var(--blue-800);padding:5px 0 7px;
+  border-bottom:1.5px solid var(--blue-100);margin-bottom:8px;letter-spacing:0.03em;}
+.guide-table{display:flex;flex-direction:column;gap:1px;}
+.guide-row{display:grid;grid-template-columns:180px 1fr;gap:12px;padding:6px 4px;
+  border-bottom:0.5px solid var(--border2);font-size:12px;align-items:start;}
+.guide-row:last-child{border-bottom:none;}
+.guide-key{font-weight:700;color:var(--text2);white-space:nowrap;}
+.guide-val{color:var(--text);line-height:1.6;}
 </style>
 </head>
 <body>
@@ -359,9 +370,86 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
   <div class="logo">点検実施工程表管理システム<span>　｜　FRe:x Design inc.</span></div>
   <div style="flex:1"></div>
   <div id="db-status" style="font-size:11px;padding:3px 10px;border-radius:12px;background:var(--surface2);color:var(--text3);cursor:pointer;" onclick="openDbModal()">⚙ DB未接続</div>
+  <button class="btn btn-sm" onclick="openGuide()">？ 操作ガイド</button>
   <button class="btn btn-sm" onclick="toggleMM()">点検方法管理</button>
   <button class="btn btn-sm btn-success" onclick="printSchedule()">🖨 印刷</button>
 </header>
+
+<!-- 操作ガイドモーダル -->
+<div class="modal-overlay" id="guide-modal-overlay">
+  <div class="modal" style="max-width:680px;max-height:90vh;display:flex;flex-direction:column;">
+    <div class="modal-head">
+      <div class="modal-ttl">📖 操作ガイド</div>
+      <button class="modal-x" onclick="closeGuide()">×</button>
+    </div>
+    <div class="modal-body" style="overflow-y:auto;flex:1;padding:20px 22px;">
+
+      <div class="guide-section">
+        <div class="guide-heading">🏢 業務の管理</div>
+        <div class="guide-table">
+          <div class="guide-row"><div class="guide-key">＋ 業務追加</div><div class="guide-val">新しい業務（現場）を登録します。業務名を入力して「登録」を押してください。</div></div>
+          <div class="guide-row"><div class="guide-key">業務タブ（1回クリック）</div><div class="guide-val">その業務のスケジュール表・工程表に切り替えます。</div></div>
+          <div class="guide-row"><div class="guide-key">業務タブ（2回クリック）</div><div class="guide-val">業務名の編集・削除ができます。</div></div>
+        </div>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-heading">📋 月間スケジュール表</div>
+        <div class="guide-table">
+          <div class="guide-row"><div class="guide-key">年度セレクター</div><div class="guide-val">表示する年度を選択します（4月〜翌3月）。または開始月・終了月を直接指定できます。</div></div>
+          <div class="guide-row"><div class="guide-key">CSVを読み込む</div><div class="guide-val">橋梁一覧のCSVファイルを読み込みます。橋梁名・路線名・橋長/施設延長・幅員・径間数が自動判定されます。</div></div>
+          <div class="guide-row"><div class="guide-key">＋ 点検を追加</div><div class="guide-val">日付・橋梁・点検方法・誘導員数・規制方法を登録します。</div></div>
+          <div class="guide-row"><div class="guide-key">📅 予備日として登録</div><div class="guide-val">点検追加ポップアップ内のボタン。日付を選んで押すと予備日（薄紫）として登録されます。</div></div>
+          <div class="guide-row"><div class="guide-key">橋梁名セルをクリック</div><div class="guide-val">登録済みの点検を編集できます。</div></div>
+          <div class="guide-row"><div class="guide-key">集合場所・備考セルをクリック</div><div class="guide-val">集合場所や備考を直接入力できます。</div></div>
+        </div>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-heading">📊 バーチャート工程表</div>
+        <div class="guide-table">
+          <div class="guide-row"><div class="guide-key">セルをクリック</div><div class="guide-val">その日・その橋梁の点検を新規追加します。</div></div>
+          <div class="guide-row"><div class="guide-key">バーをドラッグ</div><div class="guide-val">バーを左右にドラッグして日程を移動できます。</div></div>
+          <div class="guide-row"><div class="guide-key">バーの両端をドラッグ</div><div class="guide-val">バーの期間（日数）を伸縮できます。複数日にまたがる点検に対応しています。</div></div>
+          <div class="guide-row"><div class="guide-key">バーをクリック</div><div class="guide-val">点検の詳細編集ポップアップを開きます。</div></div>
+          <div class="guide-row"><div class="guide-key">バー右上の ×</div><div class="guide-val">点検を削除します。</div></div>
+          <div class="guide-row"><div class="guide-key">薄紫の縦帯</div><div class="guide-val">予備日の表示です。クリックで編集・削除できます。</div></div>
+        </div>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-heading">🖨 印刷</div>
+        <div class="guide-table">
+          <div class="guide-row"><div class="guide-key">印刷ボタン</div><div class="guide-val">月間スケジュール表をA3横で印刷します。点検データのある最初の日〜最後の日の範囲が自動的に印刷対象になります。</div></div>
+          <div class="guide-row"><div class="guide-key">印刷対象</div><div class="guide-val">月間スケジュール表タブが対象です。バーチャート工程表は印刷対象外です。</div></div>
+        </div>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-heading">💾 データ保存</div>
+        <div class="guide-table">
+          <div class="guide-row"><div class="guide-key">自動保存</div><div class="guide-val">業務・点検・橋梁データはSupabaseに自動保存されます。次回アクセス時に自動復元されます。</div></div>
+          <div class="guide-row"><div class="guide-key">⚙ DB接続中</div><div class="guide-val">右上の接続状態を確認してください。「DB未接続」の場合はクリックしてURLとキーを設定してください。</div></div>
+        </div>
+      </div>
+
+      <div class="guide-section">
+        <div class="guide-heading">🗂 CSV読み込みの列自動判定キーワード</div>
+        <div class="guide-table">
+          <div class="guide-row"><div class="guide-key">橋梁名</div><div class="guide-val">橋梁名称・橋梁名・橋名</div></div>
+          <div class="guide-row"><div class="guide-key">路線名</div><div class="guide-val">路線名称・路線名・路線</div></div>
+          <div class="guide-row"><div class="guide-key">橋長/施設延長</div><div class="guide-val">橋長・施設延長・延長・トンネル長・施設長</div></div>
+          <div class="guide-row"><div class="guide-key">幅員</div><div class="guide-val">幅員</div></div>
+          <div class="guide-row"><div class="guide-key">径間数</div><div class="guide-val">径間数・径間</div></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" onclick="closeGuide()">閉じる</button>
+    </div>
+  </div>
+</div>
 
 <!-- Supabase設定モーダル -->
 <div class="modal-overlay" id="db-modal-overlay">
@@ -1856,6 +1944,8 @@ function openDbModal(){
   document.getElementById('db-modal-overlay').classList.add('open');
 }
 function closeDbModal(){ document.getElementById('db-modal-overlay').classList.remove('open'); }
+function openGuide(){ document.getElementById('guide-modal-overlay').classList.add('open'); }
+function closeGuide(){ document.getElementById('guide-modal-overlay').classList.remove('open'); }
 
 async function saveDbConfig(){
   const url = document.getElementById('db-url').value.trim();
