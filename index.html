@@ -1169,11 +1169,23 @@ function renderSummary(){
   const biz=curBiz();if(!biz)return;
   const me=biz.entries.filter(e=>yms.some(ym=>e.date.startsWith(ym)));
   let tg=0;const mc={};
-  me.forEach(e=>{e.methods.forEach(m=>{mc[m]=(mc[m]||0)+1;});const n=parseInt(e.guide);if(!isNaN(n))tg+=n;});
+  const allYms=new Set(yms);
+  me.filter(e=>!e.reserve).forEach(e=>{
+    e.methods.forEach(m=>{mc[m]=(mc[m]||0)+1;});
+    const n=parseInt(e.guide);if(isNaN(n)) return;
+    // durDays分の日付が表示期間内にある日数だけ加算
+    const dur=Math.max(1,e.durDays||1);
+    const start=new Date(e.date+'T00:00:00');
+    for(let i=0;i<dur;i++){
+      const d=new Date(start);d.setDate(d.getDate()+i);
+      const ym2=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+      if(allYms.has(ym2)) tg+=n;
+    }
+  });
   const topM=Object.entries(mc).sort((a,b)=>b[1]-a[1]);
   document.getElementById('summary-grid').innerHTML=`
     <div class="sum-card"><div class="sum-label">業務名</div><div class="sum-val" style="font-size:14px">${biz.name}</div></div>
-    <div class="sum-card"><div class="sum-label">点検日数</div><div class="sum-val">${(()=>{const ds=new Set();const allYms=new Set(yms);me.filter(e=>!e.reserve).forEach(e=>{const dur=Math.max(1,e.durDays||1);const start=new Date(e.date+'T00:00:00');for(let i=0;i<dur;i++){const d=new Date(start);d.setDate(d.getDate()+i);const ds2=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');if(allYms.has(ds2)) ds.add(d.toISOString().slice(0,10));}});return ds.size;})()}<span class="sum-unit">日</span></div></div>
+    <div class="sum-card"><div class="sum-label">点検日数</div><div class="sum-val">${(()=>{const ds=new Set();me.filter(e=>!e.reserve).forEach(e=>{const dur=Math.max(1,e.durDays||1);const start=new Date(e.date+'T00:00:00');for(let i=0;i<dur;i++){const d=new Date(start);d.setDate(d.getDate()+i);const ds2=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');if(allYms.has(ds2)) ds.add(d.toISOString().slice(0,10));}});return ds.size;})()}<span class="sum-unit">日</span></div></div>
     <div class="sum-card"><div class="sum-label">点検橋梁数</div><div class="sum-val">${new Set(me.filter(e=>!e.reserve&&e.bridgeIdx>=0).map(e=>e.bridgeIdx)).size}<span class="sum-unit">橋</span></div></div>
     <div class="sum-card"><div class="sum-label">延べ誘導員</div><div class="sum-val">${tg}<span class="sum-unit">名</span></div></div>
     <div class="sum-card"><div class="sum-label">登録橋梁数</div><div class="sum-val">${biz.bridges.length}<span class="sum-unit">件</span></div></div>
