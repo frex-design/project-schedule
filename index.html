@@ -285,6 +285,7 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
   .biz-bar,.app-header,.ctrl-bar,.tab-bar,.method-manager,.modal-overlay,.add-btn,.btn,.gbar-del,.gbar-handle,
   .summary-grid,.legend-row,#legend-row,#summary-wrap,.no-biz,.csv-status{display:none!important;}
   .pad{padding:0;}
+  .print-title{display:block!important;font-size:16px;font-weight:800;text-align:center;margin-bottom:10px;color:#000;letter-spacing:0.05em;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   .tbl-wrap{border:1px solid #555;border-radius:0;box-shadow:none;overflow:visible;}
   tbody tr.no-entry td{border-bottom:0.8px solid #666!important;}
   tr.no-entry.print-hide{display:none!important;}
@@ -485,7 +486,8 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
 
 <!-- スケジュール表タブ -->
 <div id="panel-schedule" class="tab-panel active">
-  <div id="schedule-content"></div>
+  <div class="print-title" style="display:none">点検実施工程表</div>
+<div id="schedule-content"></div>
 </div>
 
 <!-- バーチャートタブ -->
@@ -1883,26 +1885,32 @@ async function loadFromDb(){
     const {data:bizData, error:bizErr} = await sbClient
       .from('biz_list').select('*').order('created_at');
     if(bizErr) throw bizErr;
+    if(!bizData||bizData.length===0){ renderLegend();renderBizBar();return; }
 
-    // 橋梁・点検をまとめて取得
+    // 橋梁・点検をまとめて取得（biz_idごとに1レコード、dataはJSONB配列）
     const bizIds = bizData.map(b=>b.id);
     const {data:bridgeData} = await sbClient
       .from('bridges').select('*').in('biz_id', bizIds);
     const {data:entryData} = await sbClient
-      .from('entries').select('*').in('biz_id', bizIds).order('date');
+      .from('entries').select('*').in('biz_id', bizIds);
     const {data:methodData} = await sbClient
       .from('methods_config').select('*').limit(1);
 
     // bizList に組み立て
-    bizList = bizData.map(b=>({
-      id: b.id,
-      name: b.name,
-      bridges: (bridgeData||[]).filter(br=>br.biz_id===b.id).map(br=>br.data),
-      entries: (entryData||[]).filter(e=>e.biz_id===b.id).map(e=>e.data)
-    }));
+    // bridges/entries は biz_id ごとに1レコードで data カラムが配列
+    bizList = bizData.map(b=>{
+      const br = (bridgeData||[]).find(x=>x.biz_id===b.id);
+      const en = (entryData||[]).find(x=>x.biz_id===b.id);
+      return {
+        id: b.id,
+        name: b.name,
+        bridges: br ? (br.data||[]) : [],
+        entries: en ? (en.data||[]) : []
+      };
+    });
 
     // 点検方法
-    if(methodData && methodData.length > 0){
+    if(methodData && methodData.length > 0 && methodData[0].methods){
       methods = methodData[0].methods;
     }
 
@@ -1918,32 +1926,53 @@ async function loadFromDb(){
 async function saveToDb(){
   if(!sbClient) return;
   try{
+    // 業務一覧を一括upsert
     for(const biz of bizList){
       // 業務
-      await sbClient.from('biz_list').upsert({id:biz.id, name:biz.name});
-      // 橋梁（1レコードにまとめる）
-      await sbClient.from('bridges').upsert(
-        {biz_id:biz.id, data:biz.bridges},
-        {onConflict:'biz_id'}
-      );
-      // 点検データ（1レコードにまとめる）
-      await sbClient.from('entries').upsert(
-        {biz_id:biz.id, data:biz.entries},
-        {onConflict:'biz_id'}
-      );
+      const {error:e1} = await sbClient.from('biz_list')
+        .upsert({id:biz.id, name:biz.name}, {onConflict:'id'});
+      if(e1) throw e1;
+
+      // 橋梁：既存レコードがあればupdate、なければinsert
+      const {data:existBr} = await sbClient.from('bridges')
+        .select('id').eq('biz_id', biz.id).maybeSingle();
+      if(existBr){
+        const {error:e2} = await sbClient.from('bridges')
+          .update({data:biz.bridges, updated_at:new Date().toISOString()})
+          .eq('biz_id', biz.id);
+        if(e2) throw e2;
+      } else {
+        const {error:e2} = await sbClient.from('bridges')
+          .insert({biz_id:biz.id, data:biz.bridges});
+        if(e2) throw e2;
+      }
+
+      // 点検データ：既存レコードがあればupdate、なければinsert
+      const {data:existEn} = await sbClient.from('entries')
+        .select('id').eq('biz_id', biz.id).maybeSingle();
+      if(existEn){
+        const {error:e3} = await sbClient.from('entries')
+          .update({data:biz.entries, updated_at:new Date().toISOString()})
+          .eq('biz_id', biz.id);
+        if(e3) throw e3;
+      } else {
+        const {error:e3} = await sbClient.from('entries')
+          .insert({biz_id:biz.id, data:biz.entries});
+        if(e3) throw e3;
+      }
     }
     // 点検方法
-    await sbClient.from('methods_config').upsert(
-      {id:'default', methods},
-      {onConflict:'id'}
-    );
+    const {error:e4} = await sbClient.from('methods_config')
+      .upsert({id:'default', methods}, {onConflict:'id'});
+    if(e4) throw e4;
+
     // 保存インジケーター
     const el = document.getElementById('db-status');
-    const orig = el.textContent;
-    el.textContent = '✓ 保存しました';
-    setTimeout(()=>{ el.textContent = orig; }, 1500);
+    if(el){ const orig=el.textContent; el.textContent='✓ 保存済み'; setTimeout(()=>{el.textContent=orig;},1500); }
   } catch(e){
-    console.error('saveToDb error:', e);
+    console.error('saveToDb error:', e.message||e);
+    const el = document.getElementById('db-status');
+    if(el){ el.textContent='⚠ 保存エラー'; el.style.color='var(--red-600)'; setTimeout(()=>{el.textContent='✓ DB接続中';el.style.color='#0F6E56';},3000); }
   }
 }
 
