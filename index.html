@@ -422,7 +422,7 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
         <div class="guide-heading">📱 スマートフォンでの閲覧</div>
         <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;padding:4px 0;">
           <div style="flex-shrink:0;text-align:center;">
-            <canvas id="guide-qr" style="border-radius:8px;border:1px solid var(--border2);display:block;"></canvas>
+            <img id="guide-qr" style="width:140px;height:140px;border-radius:8px;border:1px solid var(--border2);display:block;background:#f4f3ef;" alt="QRコード">
             <div style="font-size:10px;color:var(--text3);margin-top:6px;">QRコードを読み取る</div>
           </div>
           <div style="flex:1;min-width:200px;">
@@ -2023,31 +2023,12 @@ function closeDbModal(){ document.getElementById('db-modal-overlay').classList.r
 function openGuide(){
   document.getElementById('guide-modal-overlay').classList.add('open');
   const url = (window.SITE_URL && window.SITE_URL.trim()) ? window.SITE_URL.trim() : window.location.href.split('?')[0];
-  const canvas = document.getElementById('guide-qr');
+  const img = document.getElementById('guide-qr');
   const urlEl = document.getElementById('guide-qr-url');
   if(urlEl) urlEl.textContent = url;
-  if(!canvas) return;
-  // QRライブラリを動的ロードして生成
-  const generate = () => {
-    if(window.QRCode && canvas){
-      QRCode.toCanvas(canvas, url, {width:140,margin:1,color:{dark:'#1a2a4a',light:'#ffffff'}},
-        err=>{ if(err) console.warn('QR:',err); });
-    }
-  };
-  if(window.QRCode){ generate(); }
-  else {
-    const s=document.createElement('script');
-    s.src='https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
-    s.onload=generate;
-    s.onerror=()=>{
-      // フォールバック：Google Charts API
-      const img=document.createElement('img');
-      img.src='https://chart.googleapis.com/chart?chs=140x140&cht=qr&chl='+encodeURIComponent(url)+'&choe=UTF-8';
-      img.style.cssText='width:140px;height:140px;border-radius:8px;border:1px solid var(--border2);display:block;';
-      canvas.parentNode.replaceChild(img,canvas);
-    };
-    (document.head||document.documentElement).appendChild(s);
-  }
+  if(!img) return;
+  // Google Charts API でQRコード画像を生成（確実・シンプル）
+  img.src = 'https://chart.googleapis.com/chart?chs=140x140&cht=qr&chl=' + encodeURIComponent(url) + '&choe=UTF-8&chld=M|1';
 }
 function closeGuide(){ document.getElementById('guide-modal-overlay').classList.remove('open'); }
 
