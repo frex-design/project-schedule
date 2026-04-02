@@ -2,7 +2,6 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>点検実施工程表管理システム | FRe:x Design inc.</title>
 <style>
@@ -1805,7 +1804,7 @@ function commitBarChange(bizId,idx,startDay,dur,ym,rows,y,mo,total){
 const SUPABASE_URL  = 'https://rrsbyiypwgnwzqadwpky.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyc2J5aXlwd2dud3pxYWR3cGt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5OTI4NjMsImV4cCI6MjA4OTU2ODg2M30.ZNc4AebnJkBzQFvcxW_Pv2TSEBncyeuapCHE5IAeJQg';
 
-let supabase = null;
+let sbClient = null;
 
 function openDbModal(){
   // 埋め込み定数が設定済みならそれを表示、なければlocalStorageから
@@ -1833,22 +1832,33 @@ function clearDbConfig(){
   if(!confirm('接続設定を削除しますか？')) return;
   localStorage.removeItem('sb_url');
   localStorage.removeItem('sb_key');
-  supabase = null;
+  sbClient = null;
   updateDbStatus(false);
   closeDbModal();
 }
 
+async function loadSupabaseSDK(){
+  if(window.supabase) return true;
+  return new Promise(resolve=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
+    s.onload=()=>resolve(true);
+    s.onerror=()=>resolve(false);
+    (document.head||document.documentElement).appendChild(s);
+  });
+}
+
 async function initSupabase(url, key){
   try{
-    supabase = window.supabase.createClient(url, key);
+    const loaded = await loadSupabaseSDK();
+    if(!loaded || !window.supabase) throw new Error('SDK読み込み失敗');
+    sbClient = window.supabase.createClient(url, key);
     updateDbStatus(true);
     await loadFromDb();
   } catch(e){
-    console.error('Supabase init error:', e);
-    supabase = null;
+    console.error('Supabase:', e.message);
+    sbClient = null;
     updateDbStatus(false);
-    // 接続失敗でもUIは動かす
-    renderLegend();renderBizBar();
   }
 }
 
@@ -1867,20 +1877,20 @@ function updateDbStatus(connected){
 
 /* ----- DB からの読み込み ----- */
 async function loadFromDb(){
-  if(!supabase){ renderLegend();renderBizBar();return; }
+  if(!sbClient){ renderLegend();renderBizBar();return; }
   try{
     // 業務一覧
-    const {data:bizData, error:bizErr} = await supabase
+    const {data:bizData, error:bizErr} = await sbClient
       .from('biz_list').select('*').order('created_at');
     if(bizErr) throw bizErr;
 
     // 橋梁・点検をまとめて取得
     const bizIds = bizData.map(b=>b.id);
-    const {data:bridgeData} = await supabase
+    const {data:bridgeData} = await sbClient
       .from('bridges').select('*').in('biz_id', bizIds);
-    const {data:entryData} = await supabase
+    const {data:entryData} = await sbClient
       .from('entries').select('*').in('biz_id', bizIds).order('date');
-    const {data:methodData} = await supabase
+    const {data:methodData} = await sbClient
       .from('methods_config').select('*').limit(1);
 
     // bizList に組み立て
@@ -1906,24 +1916,24 @@ async function loadFromDb(){
 
 /* ----- DB への保存 ----- */
 async function saveToDb(){
-  if(!supabase) return;
+  if(!sbClient) return;
   try{
     for(const biz of bizList){
       // 業務
-      await supabase.from('biz_list').upsert({id:biz.id, name:biz.name});
+      await sbClient.from('biz_list').upsert({id:biz.id, name:biz.name});
       // 橋梁（1レコードにまとめる）
-      await supabase.from('bridges').upsert(
+      await sbClient.from('bridges').upsert(
         {biz_id:biz.id, data:biz.bridges},
         {onConflict:'biz_id'}
       );
       // 点検データ（1レコードにまとめる）
-      await supabase.from('entries').upsert(
+      await sbClient.from('entries').upsert(
         {biz_id:biz.id, data:biz.entries},
         {onConflict:'biz_id'}
       );
     }
     // 点検方法
-    await supabase.from('methods_config').upsert(
+    await sbClient.from('methods_config').upsert(
       {id:'default', methods},
       {onConflict:'id'}
     );
@@ -1939,27 +1949,29 @@ async function saveToDb(){
 
 /* ----- 業務削除をDBにも反映 ----- */
 async function deleteBizFromDb(bizId){
-  if(!supabase) return;
-  await supabase.from('entries').delete().eq('biz_id', bizId);
-  await supabase.from('bridges').delete().eq('biz_id', bizId);
-  await supabase.from('biz_list').delete().eq('id', bizId);
+  if(!sbClient) return;
+  await sbClient.from('entries').delete().eq('biz_id', bizId);
+  await sbClient.from('bridges').delete().eq('biz_id', bizId);
+  await sbClient.from('biz_list').delete().eq('id', bizId);
 }
 
 (function init(){
+  // UIを必ず先に初期化
   buildNendoSel();
   const now=new Date();
   const curNendo=now.getMonth()>=3?now.getFullYear():now.getFullYear()-1;
   document.getElementById('ym-start').value=curNendo+'-04';
   document.getElementById('ym-end').value=(curNendo+1)+'-03';
-  // 埋め込み設定で自動接続（未設定の場合はローカル動作）
+  renderLegend();
+  renderBizBar();
+
+  // Supabase接続は非同期で後から（UIの動作には影響しない）
   const sbUrl = SUPABASE_URL && !SUPABASE_URL.includes('your-project')
     ? SUPABASE_URL : localStorage.getItem('sb_url');
   const sbKey = SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.includes('your-anon-key')
     ? SUPABASE_ANON_KEY : localStorage.getItem('sb_key');
   if(sbUrl && sbKey){
-    initSupabase(sbUrl, sbKey);
-  } else {
-    renderLegend();renderBizBar();
+    setTimeout(()=>initSupabase(sbUrl, sbKey), 0);
   }
 })();
 </script>
