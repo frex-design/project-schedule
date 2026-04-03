@@ -489,6 +489,7 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
       <div class="guide-section">
         <div class="guide-heading">🗂 CSV読み込みの列自動判定キーワード</div>
         <div class="guide-table">
+          <div class="guide-row"><div class="guide-key">NO.</div><div class="guide-val">NO.・NO・No.・No・番号</div></div>
           <div class="guide-row"><div class="guide-key">橋梁名/施設名</div><div class="guide-val">橋梁名称・橋梁名・橋名・名称・施設名</div></div>
           <div class="guide-row"><div class="guide-key">路線名</div><div class="guide-val">路線名称・路線名・路線</div></div>
           <div class="guide-row"><div class="guide-key">橋長/施設延長</div><div class="guide-val">橋長・施設延長・延長・トンネル長・施設長</div></div>
@@ -1020,6 +1021,7 @@ function parseCSV(txt){
   const KEYS={
     name:   ['橋梁名称','橋梁名','橋名','名称','施設名'],
     route:  ['路線名称','路線名','路線'],
+    no:     ['NO.','NO','No.','No','番号'],
     code:   ['橋梁コード','コード','管理番号'],
     length: ['橋長','施設延長','延長','トンネル長','施設長'],
     spans:  ['径間数','径間'],
@@ -1053,6 +1055,7 @@ function parseCSV(txt){
     const c=parseCSVLine(l);
     if(c.every(v=>!v.trim())) return null; // 空行スキップ
     return{
+      no:      get(cols.no,c),
       code:    get(cols.code,c),
       route:   get(cols.route,c),
       name:    get(cols.name,c),
@@ -1472,6 +1475,7 @@ function renderSchedule(){
       +'<thead><tr>'
       +'<th style="width:44px">日付</th>'
       +'<th style="width:28px">曜</th>'
+      +'<th style="width:36px">NO.</th>'
       +'<th style="width:140px">橋梁名/施設名</th>'
       +'<th style="width:108px">路線名</th>'
       +'<th style="width:52px">橋長/<br>施設延長</th>'
@@ -1550,8 +1554,13 @@ function renderSchedule(){
           tdW.style.cssText='vertical-align:top;padding-top:7px;border-bottom:0.5px solid var(--border2);';
           tdW.textContent=isHolDay?'(祝)':'('+DAYS[dow]+')';tr.appendChild(tdW);
         }
-        // 橋梁名セル
+        // NO.セル
         const isStartDay=(e.date===ds);
+        const tdNo=document.createElement('td');
+        tdNo.style.cssText='text-align:center;font-size:11px;color:var(--text3);';
+        tdNo.textContent=isStartDay&&b&&b.no?b.no:'';
+        tr.appendChild(tdNo);
+        // 橋梁名セル
         const tdB=document.createElement('td');
         tdB.style.cssText='font-weight:'+(isStartDay?'700':'400')+';font-size:12px;'
           +'color:'+(isStartDay?'var(--text)':'var(--text3)')+';'
@@ -1652,7 +1661,7 @@ function renderSchedule(){
         const ab=document.createElement('button');ab.className='add-btn';ab.textContent='＋ 点検を追加';
         ab.onclick=()=>openAddModal(ds,null);tdB.appendChild(ab);
         tr.append(tdD,tdW,tdB);
-        for(let i=0;i<9;i++){
+        for(let i=0;i<10;i++){
           const t=document.createElement('td');t.textContent='';
           tr.appendChild(t);
         }
@@ -1673,19 +1682,17 @@ function renderSchedule(){
    バーチャート（全業務を縦に並べる）
    ============================================================ */
 function ganttAllRows(){
-  // 全業務を走査して業務区切り+橋梁行を作る
+  // 現在選択中の業務のみ表示
   const rows=[];
-  bizList.forEach(biz=>{
-    rows.push({type:'sep',bizId:biz.id,name:biz.name});
-    if(biz.bridges.length>0){
-      biz.bridges.forEach((b,bi)=>rows.push({type:'bridge',bizId:biz.id,bi,name:b.name}));
-    } else {
-      // bridgesなしでentriesにある橋梁idのみ
-      const ids=[...new Set(biz.entries.map(e=>e.bridgeIdx).filter(i=>i>=0))];
-      if(ids.length===0) rows.push({type:'bridge',bizId:biz.id,bi:-1,name:'（橋梁未登録）'});
-      else ids.forEach(bi=>rows.push({type:'bridge',bizId:biz.id,bi,name:'橋梁'+bi}));
-    }
-  });
+  const biz=curBiz();
+  if(!biz) return rows;
+  if(biz.bridges.length>0){
+    biz.bridges.forEach((b,bi)=>rows.push({type:'bridge',bizId:biz.id,bi,name:b.name}));
+  } else {
+    const ids=[...new Set(biz.entries.map(e=>e.bridgeIdx).filter(i=>i>=0))];
+    if(ids.length===0) rows.push({type:'bridge',bizId:biz.id,bi:-1,name:'（橋梁未登録）'});
+    else ids.forEach(bi=>rows.push({type:'bridge',bizId:biz.id,bi,name:'橋梁'+bi}));
+  }
   return rows;
 }
 
