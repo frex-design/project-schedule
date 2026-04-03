@@ -351,6 +351,17 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
   @page{margin:15mm 12mm 15mm 12mm;size:A3 landscape;}
 }
 
+/* 印刷メニュー */
+.print-menu-item{display:block;width:100%;text-align:left;padding:9px 14px;font-size:12px;font-weight:600;
+  background:none;border:none;cursor:pointer;color:var(--text);transition:background 0.1s;}
+.print-menu-item:hover{background:var(--surface2);}
+.print-menu-item+.print-menu-item{border-top:0.5px solid var(--border2);}
+/* 点検方法別印刷 - ページ区切り */
+.method-print-section{page-break-after:always;}
+.method-print-section:last-child{page-break-after:auto;}
+.method-print-heading{font-size:14px;font-weight:800;color:#1a2a4a;margin-bottom:8px;
+  padding:6px 10px;background:#e8edf5;border-left:4px solid #2d3748;}
+
 /* ========== スマホ対応 ========== */
 @media (max-width:768px){
   /* ヘッダー */
@@ -406,8 +417,32 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
   <div id="db-status" style="font-size:11px;padding:3px 10px;border-radius:12px;background:var(--surface2);color:var(--text3);cursor:pointer;" onclick="openDbModal()">⚙ DB未接続</div>
   <button class="btn btn-sm sp-hide" onclick="openGuide()">？ 操作ガイド</button>
   <button class="btn btn-sm sp-hide" onclick="toggleMM()">点検方法管理</button>
-  <button class="btn btn-sm btn-success sp-hide" onclick="printSchedule()">🖨 印刷</button>
+  <div class="print-menu-wrap sp-hide" style="position:relative;">
+    <button class="btn btn-sm btn-success" onclick="togglePrintMenu(event)">🖨 印刷 ▾</button>
+    <div id="print-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,0.12);min-width:180px;z-index:500;">
+      <button class="print-menu-item" onclick="printSchedule();closePrintMenu()">📋 通常印刷</button>
+      <button class="print-menu-item" onclick="openPrintByMethod()">🗂 点検方法別印刷</button>
+    </div>
+  </div>
 </header>
+
+<!-- 点検方法別印刷モーダル -->
+<div class="modal-overlay" id="method-print-overlay">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-head">
+      <div class="modal-ttl">🗂 点検方法別印刷</div>
+      <button class="modal-x" onclick="closeMethodPrint()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:12px;">印刷する点検方法を選択してください。<br>点検方法ごとに別ページで印刷されます。</p>
+      <div id="method-print-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeMethodPrint()">キャンセル</button>
+      <button class="btn btn-primary" onclick="execPrintByMethod()">印刷</button>
+    </div>
+  </div>
+</div>
 
 <!-- 操作ガイドモーダル -->
 <div class="modal-overlay" id="guide-modal-overlay">
@@ -1382,6 +1417,124 @@ function renderSummary(){
 /* ============================================================
    renderAll
    ============================================================ */
+/* 印刷メニュー制御 */
+function togglePrintMenu(e){
+  e.stopPropagation();
+  const m=document.getElementById("print-menu");
+  m.style.display=m.style.display==="none"?"block":"none";
+  if(m.style.display==="block"){
+    setTimeout(()=>document.addEventListener("click",closePrintMenu,{once:true}),0);
+  }
+}
+function closePrintMenu(){ const m=document.getElementById("print-menu");if(m)m.style.display="none"; }
+
+function openPrintByMethod(){
+  closePrintMenu();
+  const biz=curBiz();if(!biz)return;
+  // 使用されている点検方法を収集
+  const usedMethods=new Set();
+  biz.entries.filter(e=>!e.reserve).forEach(e=>e.methods.forEach(m=>usedMethods.add(m)));
+  if(!usedMethods.size){alert("点検データがありません");return;}
+  const list=document.getElementById("method-print-list");
+  list.innerHTML="";
+  [...usedMethods].forEach(m=>{
+    const row=document.createElement("div");
+    row.style.cssText="display:flex;align-items:center;gap:8px;";
+    const cb=document.createElement("input");cb.type="checkbox";cb.value=m;cb.id="mpc-"+m;cb.checked=true;
+    const lbl=document.createElement("label");lbl.htmlFor="mpc-"+m;
+    lbl.innerHTML='<span class="btag '+tc(m)+'" style="font-size:11px">'+m+"</span>";
+    row.appendChild(cb);row.appendChild(lbl);list.appendChild(row);
+  });
+  document.getElementById("method-print-overlay").classList.add("open");
+}
+function closeMethodPrint(){ document.getElementById("method-print-overlay").classList.remove("open"); }
+
+function execPrintByMethod(){
+  closeMethodPrint();
+  const biz=curBiz();if(!biz)return;
+  const checked=[...document.querySelectorAll('#method-print-list input:checked')].map(cb=>cb.value);
+  if(!checked.length){alert('点検方法を選択してください');return;}
+
+  const yms=getYmRange();
+  const sc=document.getElementById('schedule-content');
+  const original=sc.innerHTML;
+  const colHd='<th style="width:44px">日付</th><th style="width:28px">曜</th>'
+    +'<th style="width:36px">NO.</th><th style="width:140px">橋梁名/施設名</th>'
+    +'<th style="width:108px">路線名</th><th style="width:52px">橋長/<br>施設延長</th>'
+    +'<th style="width:46px">幅員</th><th style="width:52px">径間数</th>'
+    +'<th style="width:130px">点検方法</th><th style="width:58px">誘導員数</th>'
+    +'<th style="width:96px">規制方法</th><th style="width:160px">集合場所</th>'
+    +'<th style="width:110px">備考</th>';
+
+  let printHTML='';
+  checked.forEach((method,mi)=>{
+    printHTML+='<div class="method-print-section">';
+    printHTML+='<div class="print-title" style="display:block">点検実施工程表</div>';
+    printHTML+='<div class="method-print-heading">【点検方法：'+method+'】</div>';
+
+    yms.forEach(ym=>{
+      const [y,mo]=ym.split('-').map(Number);
+      const total=new Date(y,mo,0).getDate();
+      const monthLabel=y+'年'+mo+'月';
+      const hasEntry=biz.entries.some(e=>!e.reserve&&e.date.startsWith(ym)&&e.methods[0]===method);
+      if(!hasEntry) return;
+
+      printHTML+='<div class="month-section"><div class="month-heading">'+monthLabel+'</div>';
+      printHTML+='<div class="tbl-wrap"><table><thead><tr>'+colHd+'</tr></thead><tbody>';
+
+      for(let d=1;d<=total;d++){
+        const ds=ym+'-'+(d<10?'0':'')+d;
+        const dow=new Date(y,mo-1,d).getDay();
+        const isHol=isHoliday(ds)&&dow!==0&&dow!==6;
+        const dayEntries=biz.entries.filter(e=>{
+          if(e.reserve||e.methods[0]!==method) return false;
+          const dur=Math.max(1,e.durDays||1);
+          const start=new Date(e.date+'T00:00:00');
+          const target=new Date(ds+'T00:00:00');
+          const end=new Date(start);end.setDate(end.getDate()+dur-1);
+          return target>=start&&target<=end;
+        });
+        if(!dayEntries.length) continue;
+        const rowCls=dow===6?'wsat':dow===0?'wsun':isHol?'holiday-day':'';
+        dayEntries.forEach((e,ei)=>{
+          const b=(e.bridgeIdx>=0&&biz.bridges[e.bridgeIdx])?biz.bridges[e.bridgeIdx]:null;
+          const isStart=e.date===ds;
+          printHTML+='<tr'+(rowCls?' class="'+rowCls+'"':'')+' >';
+          if(ei===0){
+            const wDay=isHol?'(祝)':'('+DAYS[dow]+')';
+            printHTML+='<td class="dc" rowspan="'+dayEntries.length+'">'+d+'日</td>';
+            printHTML+='<td class="wc" rowspan="'+dayEntries.length+'">'+wDay+'</td>';
+          }
+          const no=b&&b.no?b.no:'';
+          const bname=b?b.name:'（橋梁未設定）';
+          const nameCell=isStart?bname:'↳ '+bname;
+          const methodTags=e.methods.map(m=>'<span class="btag '+tc(m)+'">'+m+'</span>').join(' / ');
+          printHTML+='<td style="text-align:center">'+no+'</td>';
+          printHTML+='<td style="font-weight:'+(isStart?'700':'400')+'">'+nameCell+'</td>';
+          printHTML+='<td>'+(b?b.route:'')+'</td>';
+          printHTML+='<td style="text-align:center">'+(b?fmt1(b.length)+'m':'')+'</td>';
+          printHTML+='<td style="text-align:center">'+(b?fmt1(b.width)+'m':'')+'</td>';
+          printHTML+='<td style="text-align:center">'+(b?b.spans+'径間':'')+'</td>';
+          printHTML+='<td style="text-align:center">'+methodTags+'</td>';
+          printHTML+='<td style="text-align:center">'+(e.guide||'')+'</td>';
+          printHTML+='<td style="text-align:center">'+(e.reg||'')+'</td>';
+          printHTML+='<td>'+(e.place||'')+'</td>';
+          printHTML+='<td>'+(e.note||'')+'</td>';
+          printHTML+='</tr>';
+        });
+      }
+      printHTML+='</tbody></table></div></div>';
+    });
+    printHTML+='</div>';
+  });
+
+  sc.innerHTML=printHTML;
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=>{ sc.innerHTML=original; },500);
+  },100);
+}
+
 /* 印刷範囲制御 */
 function printSchedule(){
   const biz=curBiz();
