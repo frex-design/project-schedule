@@ -239,7 +239,7 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
 .g-month-row{display:flex;height:28px;border-bottom:0.5px solid var(--border2);}
 .g-month-cell{display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text2);border-right:0.5px solid var(--border);}
 .g-day-row{display:flex;height:28px;}
-.g-day{width:var(--cell-w);min-width:var(--cell-w);height:28px;flex-shrink:0;display:flex;flex-direction:column;
+.g-day{width:var(--cell-w);min-width:var(--cell-w);height:28px;box-sizing:content-box;flex-shrink:0;display:flex;flex-direction:column;
   align-items:center;justify-content:center;font-size:10px;border-right:0.5px solid var(--border);}
 .g-day-n{font-size:10px;font-weight:600;color:var(--text3);line-height:1;}
 .g-day-w{font-size:9px;color:var(--text3);line-height:1;}
@@ -250,7 +250,7 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
 
 .g-row{display:flex;height:36px;min-height:36px;border-bottom:0.5px solid var(--border);box-sizing:border-box;position:relative;}
 .g-row:not(.biz-sep):nth-child(even){background:rgba(244,243,239,0.55);}
-.g-cell{width:var(--cell-w);min-width:var(--cell-w);height:36px;box-sizing:border-box;flex-shrink:0;
+.g-cell{width:var(--cell-w);min-width:var(--cell-w);height:36px;box-sizing:content-box;flex-shrink:0;
   border-right:0.5px solid var(--border);cursor:pointer;transition:background 0.1s;}
 .g-cell:hover{background:rgba(181,212,244,0.45);}
 .g-cell.sat{background:rgba(181,212,244,0.28);}
@@ -2030,25 +2030,9 @@ function renderGantt(){
 
   // バーレイヤーを tbody の上に absolute で重ねる
   // gantt-outer を position:relative にして配置
-  // bar-layerはgantt-outerの子として配置済み
-  // requestAnimationFrameでDOMレンダリング後に正確な位置を設定
-  requestAnimationFrame(()=>{
-    const tableEl=document.getElementById('gantt-table');
-    const outer=document.getElementById('gantt-outer');
-    if(!tableEl||!outer) return;
-    const nameTh=tableEl.querySelector('.gantt-th-name');
-    const headRow=document.getElementById('g-head-wrap');
-    const outerRect=outer.getBoundingClientRect();
-    const nameRect=nameTh?nameTh.getBoundingClientRect():{right:outerRect.left+200};
-    const headRect=headRow?headRow.getBoundingClientRect():{bottom:outerRect.top+56};
-    const leftPx=nameRect.right-outerRect.left+outer.scrollLeft;
-    const topPx=headRect.bottom-outerRect.top;
-    bl.style.left=leftPx+'px';
-    bl.dataset.baseLeft=leftPx;
-    bl.style.top=topPx+'px';
-    bl.style.width=(outer.scrollWidth-leftPx)+'px';
-    bl.style.height=(outer.scrollHeight-topPx)+'px';
-  });
+  // 固定値で配置（name-w=200px, header=56px）
+  bl.style.cssText='position:absolute;top:56px;left:200px;pointer-events:none;z-index:5;';
+  bl.dataset.baseLeft=200;
 
   renderBars(rows,yms,ymMeta,total);
   // スクロール時にbar-layerのleftを追従させる
@@ -2057,7 +2041,7 @@ function renderGantt(){
     outer._blScrollBound=true;
     outer.addEventListener('scroll',()=>{
       const bl2=document.getElementById('bar-layer');
-      if(bl2) bl2.style.left=(parseFloat(bl2.dataset.baseLeft||0)+outer.scrollLeft)+'px';
+      if(bl2) bl2.style.left=(200+outer.scrollLeft)+'px';
     });
   }
 }
