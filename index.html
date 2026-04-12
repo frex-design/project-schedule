@@ -704,7 +704,8 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
 <div id="panel-gantt" class="tab-panel active">
   <div id="gantt-welcome"></div>
   <div class="pad">
-    <div class="gantt-outer" id="gantt-outer">
+    <div class="gantt-outer" id="gantt-outer" style="position:relative;">
+      <div id="bar-layer" style="position:absolute;top:0;left:0;pointer-events:none;z-index:5;"></div>
       <table class="gantt-table" id="gantt-table">
         <thead id="g-head-wrap">
           <tr>
@@ -2029,18 +2030,36 @@ function renderGantt(){
 
   // バーレイヤーを tbody の上に absolute で重ねる
   // gantt-outer を position:relative にして配置
-  const tableEl=document.getElementById('gantt-table');
-  tableEl.style.position='relative';
-  // 左列thの実際の幅を取得してbar-layerのleftを正確に設定
-  const nameTh=tableEl.querySelector('.gantt-th-name');
-  const nameW=nameTh?nameTh.getBoundingClientRect().width:parseInt(getComputedStyle(document.documentElement).getPropertyValue('--name-w'))||200;
-  // ヘッダー行の高さも実測
-  const headRow=document.getElementById('g-head-wrap');
-  const headH=headRow?headRow.getBoundingClientRect().height:56;
-  bl.style.cssText='position:absolute;top:'+headH+'px;left:'+nameW+'px;right:0;bottom:0;pointer-events:none;z-index:5;';
-  tableEl.appendChild(bl);
+  // bar-layerはgantt-outerの子として配置済み
+  // requestAnimationFrameでDOMレンダリング後に正確な位置を設定
+  requestAnimationFrame(()=>{
+    const tableEl=document.getElementById('gantt-table');
+    const outer=document.getElementById('gantt-outer');
+    if(!tableEl||!outer) return;
+    const nameTh=tableEl.querySelector('.gantt-th-name');
+    const headRow=document.getElementById('g-head-wrap');
+    const outerRect=outer.getBoundingClientRect();
+    const nameRect=nameTh?nameTh.getBoundingClientRect():{right:outerRect.left+200};
+    const headRect=headRow?headRow.getBoundingClientRect():{bottom:outerRect.top+56};
+    const leftPx=nameRect.right-outerRect.left+outer.scrollLeft;
+    const topPx=headRect.bottom-outerRect.top;
+    bl.style.left=leftPx+'px';
+    bl.dataset.baseLeft=leftPx;
+    bl.style.top=topPx+'px';
+    bl.style.width=(outer.scrollWidth-leftPx)+'px';
+    bl.style.height=(outer.scrollHeight-topPx)+'px';
+  });
 
   renderBars(rows,yms,ymMeta,total);
+  // スクロール時にbar-layerのleftを追従させる
+  const outer=document.getElementById('gantt-outer');
+  if(outer&&!outer._blScrollBound){
+    outer._blScrollBound=true;
+    outer.addEventListener('scroll',()=>{
+      const bl2=document.getElementById('bar-layer');
+      if(bl2) bl2.style.left=(parseFloat(bl2.dataset.baseLeft||0)+outer.scrollLeft)+'px';
+    });
+  }
 }
 
 function renderBars(rows,yms,ymMeta,total){
