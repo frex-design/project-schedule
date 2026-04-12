@@ -705,7 +705,7 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
   <div id="gantt-welcome"></div>
   <div class="pad">
     <div class="gantt-outer" id="gantt-outer" style="position:relative;">
-      <div id="bar-layer" style="position:absolute;top:0;left:0;pointer-events:none;z-index:5;"></div>
+      <div id="bar-layer" style="position:absolute;pointer-events:none;z-index:5;"></div>
       <table class="gantt-table" id="gantt-table">
         <thead id="g-head-wrap">
           <tr>
@@ -2031,9 +2031,15 @@ function renderGantt(){
 
   // バーレイヤーを tbody の上に absolute で重ねる
   // gantt-outer を position:relative にして配置
-  // 固定値で配置（name-w=200px, header=56px）
-  bl.style.cssText='position:absolute;top:56px;left:200px;pointer-events:none;z-index:5;';
-  bl.dataset.baseLeft=200;
+  // g-bodyのoffsetTopとgantt-th-nameのoffsetWidthで正確に配置
+  const nameTh2=document.querySelector('.gantt-th-name');
+  const nameW2=nameTh2?nameTh2.offsetWidth:200;
+  const tbody2=document.getElementById('g-body');
+  const topH2=tbody2?tbody2.offsetTop:56;
+  const outer2=document.getElementById('gantt-outer');
+  bl.style.cssText='position:absolute;top:'+topH2+'px;left:'+nameW2+'px;pointer-events:none;z-index:5;';
+  if(outer2&&!bl.parentNode) outer2.appendChild(bl);
+  else if(outer2&&bl.parentNode!==outer2) outer2.appendChild(bl);
 
   renderBars(rows,yms,ymMeta,total);
 }
