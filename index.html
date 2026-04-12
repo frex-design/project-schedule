@@ -702,6 +702,7 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
 
 <!-- バーチャートタブ -->
 <div id="panel-gantt" class="tab-panel active">
+  <div id="gantt-welcome"></div>
   <div class="pad">
     <div class="gantt-outer" id="gantt-outer">
       <table class="gantt-table" id="gantt-table">
@@ -1017,27 +1018,35 @@ function renderBizBar(){
 
   // 業務なし or 未選択時の表示
   const sc = document.getElementById('schedule-content');
+  const gw = document.getElementById('gantt-welcome');
+  const ganttOuter = document.getElementById('gantt-outer');
   if(!currentBiz){
     document.getElementById('ctrl-bar').style.display='none';
     document.getElementById('summary-wrap').style.display='none';
+    if(ganttOuter) ganttOuter.style.display='none';
+    let welcomeHTML;
     if(bizList.length===0){
-      // 業務が1件もない → 業務追加を促す
-      sc.innerHTML=`<div class="welcome">
+      welcomeHTML=`<div class="welcome">
         <div class="welcome-logo">FRe:x Design inc.</div>
         <div class="welcome-title">ようこそ<br><span>点検実施工程管理システム</span>へ</div>
         <div class="welcome-sub">まず「＋ 業務追加」ボタンから業務名を登録してください。</div>
         <div class="welcome-arrow">↑ 上の「＋ 業務追加」をクリック</div>
       </div>`;
     } else {
-      // 業務はあるが未選択 → 業務タブをクリック促す
       const bizBtns = bizList.map(b=>`<button class="biz-tab" onclick="selectBiz('${b.id}')" style="font-size:13px;padding:8px 20px">${b.name}</button>`).join('');
-      sc.innerHTML=`<div class="welcome">
+      welcomeHTML=`<div class="welcome">
         <div class="welcome-logo">FRe:x Design inc.</div>
         <div class="welcome-title">ようこそ<br><span>点検実施工程管理システム</span>へ</div>
         <div class="welcome-sub">業務を選択してスケジュール表を表示します。</div>
         <div class="welcome-biz-hint">${bizBtns}</div>
       </div>`;
     }
+    sc.innerHTML=welcomeHTML;
+    if(gw) gw.innerHTML=welcomeHTML;
+  } else {
+    // 業務選択済み：ウェルカム非表示・gantt表示
+    if(gw) gw.innerHTML='';
+    if(ganttOuter) ganttOuter.style.display='';
   }
 }
 
