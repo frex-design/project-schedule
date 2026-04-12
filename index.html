@@ -1036,15 +1036,32 @@ function loadCSV(inp){
   const biz=curBiz(); if(!biz){alert('先に業務を選択してください');return;}
   const f=inp.files[0];if(!f)return;
   const r=new FileReader();
-  r.onload=e=>{
+  // エンコーディング自動判定（UTF-8 BOM付/なし・Shift_JIS対応）
+  r.onload=ev=>{
+    const buf=ev.target.result;
+    const u8=new Uint8Array(buf);
+    const hasUTF8BOM=u8[0]===0xEF&&u8[1]===0xBB&&u8[2]===0xBF;
+    let enc='UTF-8';
+    if(!hasUTF8BOM){
+      for(let i=0;i<Math.min(u8.length,1000);i++){
+        if(u8[i]>=0x80){enc='Shift_JIS';break;}
+      }
+    }
+    const tryDecode=(e)=>{
+      const decoded=new TextDecoder(e).decode(buf);
+      biz.bridges=parseCSV(decoded);
+      updateCSVStatus();buildBSel();renderAll();
+    };
     try{
-      biz.bridges=parseCSV(e.target.result);
-      updateCSVStatus();
-      buildBSel();
-      renderAll();
-    }catch(err){alert('CSV読み込みエラー: '+err.message);}
+      tryDecode(enc);
+    }catch(err){
+      if(enc!=='UTF-8'){
+        try{tryDecode('UTF-8');return;}catch(e2){}
+      }
+      alert('CSV読み込みエラー: '+err.message);
+    }
   };
-  r.readAsText(f,'UTF-8');
+  r.readAsArrayBuffer(f);
 }
 function updateCSVStatus(){
   const st=document.getElementById('csv-status');
@@ -1055,15 +1072,37 @@ function updateCSVStatus(){
     st.style.display='none';
   }
 }
-function parseCSV(txt){
+// セル内改行・ダブルクォートを正しく処理するCSVパーサー
+function parseCSVAll(txt){
   txt=txt.replace(/^\uFEFF/,'');
-  const lines=txt.split(/\r?\n/).filter(l=>l.trim());
-  if(lines.length<2) throw new Error('データが見つかりません');
+  const rows=[];
+  let row=[], cur='', q=false;
+  for(let i=0;i<txt.length;i++){
+    const ch=txt[i];
+    if(q){
+      if(ch==='"'){
+        if(i+1<txt.length&&txt[i+1]==='"'){cur+='"';i++;}
+        else q=false;
+      } else { cur+=ch; }
+    } else {
+      if(ch==='"'){ q=true; }
+      else if(ch===','){ row.push(cur);cur=''; }
+      else if(ch==='\n'){ row.push(cur);cur='';rows.push(row);row=[]; }
+      else if(ch==='\r'){}
+      else { cur+=ch; }
+    }
+  }
+  if(cur||row.length){ row.push(cur);rows.push(row); }
+  return rows.filter(r=>r.some(c=>c.trim()));
+}
 
-  // ヘッダー行を解析して列インデックスを自動判定
-  const header=parseCSVLine(lines[0]).map(h=>h.trim());
+function parseCSV(txt){
+  const rows=parseCSVAll(txt);
+  if(rows.length<2) throw new Error('データが見つかりません');
 
-  // 各項目のキーワード候補（部分一致で探す）
+  // 全角スペース・セル内改行を除去して正規化
+  const norm=h=>h.replace(/\u3000/g,' ').replace(/[\r\n]+/g,' ').trim();
+
   const KEYS={
     name:   ['橋梁名称','橋梁名','橋名','名称','施設名'],
     route:  ['路線名称','路線名','路線'],
@@ -1071,35 +1110,47 @@ function parseCSV(txt){
     code:   ['橋梁コード','コード','管理番号'],
     length: ['橋長','施設延長','延長','トンネル長','施設長'],
     spans:  ['径間数','径間'],
-    width:  ['幅員'],
+    width:  ['幅員','全幅員'],
     address:['所在地','住所'],
     year:   ['架設年次','架設年','竣工年'],
     kana:   ['カナ名称','カナ','ふりがな'],
   };
 
-  function findCol(keys){
+  function findCol(header, keys){
     for(const key of keys){
-      const i=header.findIndex(h=>h.includes(key));
+      const i=header.findIndex(h=>norm(h).includes(key));
       if(i>=0) return i;
     }
     return -1;
   }
 
+  // ヘッダー行を自動特定（最初の5行でKEYSマッチ数が最多の行）
+  let headerRowIdx=0, bestScore=0;
+  for(let ri=0;ri<Math.min(5,rows.length);ri++){
+    let score=0;
+    for(const keys of Object.values(KEYS)){
+      if(findCol(rows[ri],keys)>=0) score++;
+    }
+    if(score>bestScore){bestScore=score;headerRowIdx=ri;}
+  }
+
+  const header=rows[headerRowIdx];
   const cols={};
   for(const [field,keys] of Object.entries(KEYS)){
-    cols[field]=findCol(keys);
+    cols[field]=findCol(header,keys);
   }
 
-  // 橋梁名か路線名の少なくとも一方が見つからなければエラー
-  if(cols.name<0 && cols.route<0){
-    throw new Error('ヘッダー行に「橋梁名/施設名」または「路線名」が見つかりません。\n\nCSVの1行目（ヘッダー）を確認してください。\n検出されたヘッダー: '+header.join(' / '));
+  if(cols.name<0&&cols.route<0){
+    throw new Error('ヘッダー行に「橋梁名/施設名」または「路線名」が見つかりません。\n検出: '+header.map(norm).filter(h=>h).join(' / '));
   }
 
-  const get=(c,row)=>c>=0&&c<row.length?row[c].trim():'';
+  const get=(c,row)=>{
+    if(c<0||c>=row.length) return '';
+    return row[c].replace(/[\r\n]+/g,' ').trim();
+  };
 
-  const result=lines.slice(1).map(l=>{
-    const c=parseCSVLine(l);
-    if(c.every(v=>!v.trim())) return null; // 空行スキップ
+  const result=rows.slice(headerRowIdx+1).map(c=>{
+    if(c.every(v=>!v.trim())) return null;
     return{
       no:      get(cols.no,c),
       code:    get(cols.code,c),
@@ -1112,7 +1163,7 @@ function parseCSV(txt){
       width:   get(cols.width,c),
       year:    get(cols.year,c),
     };
-  }).filter(r=>r&&(r.name||r.route)); // 橋梁名か路線名がある行のみ
+  }).filter(r=>r&&(r.name||r.route));
 
   if(result.length===0) throw new Error('有効なデータ行が見つかりませんでした');
   return result;
