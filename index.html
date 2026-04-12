@@ -212,6 +212,7 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
   padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   position:sticky;left:0;z-index:10;
   height:36px;box-sizing:border-box;}
+.gantt-td-name,.gantt-td-grid{box-sizing:border-box;}
 .gantt-td-name.biz-sep{
   background:var(--blue-800);color:#fff;font-size:10px;font-weight:700;
   letter-spacing:0.04em;height:28px;}
@@ -704,8 +705,7 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
 <div id="panel-gantt" class="tab-panel active">
   <div id="gantt-welcome"></div>
   <div class="pad">
-    <div class="gantt-outer" id="gantt-outer" style="position:relative;">
-      <div id="bar-layer" style="position:absolute;pointer-events:none;z-index:5;"></div>
+    <div class="gantt-outer" id="gantt-outer">
       <table class="gantt-table" id="gantt-table">
         <thead id="g-head-wrap">
           <tr>
@@ -2031,11 +2031,11 @@ function renderGantt(){
 
   // バーレイヤーを tbody の上に absolute で重ねる
   // gantt-outer を position:relative にして配置
-  // theadの高さ=月行28px+日行28px=56px固定、left=gantt-th-nameのoffsetWidth
-  const nameTh2=document.querySelector('.gantt-th-name');
-  const nameW2=nameTh2?nameTh2.offsetWidth:200;
-  bl.style.top='56px';
-  bl.style.left=nameW2+'px';
+  // bar-layerをgantt-tableの子として配置
+  const tbl=document.getElementById('gantt-table');
+  tbl.style.position='relative';
+  bl.style.cssText='position:absolute;top:56px;left:200px;pointer-events:none;z-index:5;';
+  if(bl.parentNode!==tbl) tbl.appendChild(bl);
 
   renderBars(rows,yms,ymMeta,total);
 }
