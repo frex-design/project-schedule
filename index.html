@@ -623,8 +623,8 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
 
 <!-- タブ -->
 <div class="tab-bar">
-  <button class="tab active" onclick="switchTab('schedule',this)">📋 月間スケジュール表</button>
-  <button class="tab" onclick="switchTab('gantt',this)">📊 バーチャート工程表</button>
+  <button class="tab active" onclick="switchTab('gantt',this)">📊 バーチャート工程表</button>
+  <button class="tab" onclick="switchTab('schedule',this)">📋 月間スケジュール表</button>
 </div>
 
 <!-- コントロールバー -->
@@ -695,13 +695,13 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
 </div>
 
 <!-- スケジュール表タブ -->
-<div id="panel-schedule" class="tab-panel active">
+<div id="panel-schedule" class="tab-panel">
   <div class="print-title" style="display:none">点検実施工程表</div>
 <div id="schedule-content"></div>
 </div>
 
 <!-- バーチャートタブ -->
-<div id="panel-gantt" class="tab-panel">
+<div id="panel-gantt" class="tab-panel active">
   <div class="pad">
     <div class="gantt-outer" id="gantt-outer">
       <table class="gantt-table" id="gantt-table">
@@ -803,7 +803,7 @@ let bizList   = [];  // 業務一覧
 let currentBiz = null; // 現在選択中の業務 id
 let methods   = ["BT-200","高所作業車"];
 let editIdx   = -1;
-let currentTab = 'schedule';
+let currentTab = 'gantt';
 
 // 期間ヘルパー
 function buildYmList(start,end){
@@ -1169,7 +1169,7 @@ function parseCSV(txt){
     return{
       no:      get(cols.no,c),
       code:    get(cols.code,c),
-      route:   get(cols.route,c),
+      route:   (()=>{ const r=get(cols.route,c); return /^\d+$/.test(r)?'国道'+r+'号':r; })(),
       name:    get(cols.name,c),
       kana:    get(cols.kana,c),
       address: get(cols.address,c),
@@ -2405,6 +2405,7 @@ async function deleteBizFromDb(bizId){
 
 (function init(){
   // UIを必ず先に初期化
+  if(isMobile()) currentTab='schedule';
   buildNendoSel();
   const now=new Date();
   const curNendo=now.getMonth()>=3?now.getFullYear():now.getFullYear()-1;
