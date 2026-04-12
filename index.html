@@ -533,6 +533,17 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
         </div>
       </div>
 
+      <div class="guide-section">
+        <div class="guide-heading">📅 Googleカレンダーへの同期</div>
+        <div class="guide-table">
+          <div class="guide-row"><div class="guide-key">①</div><div class="guide-val"><a href="https://calendar.google.com" target="_blank" style="color:var(--blue-600)">calendar.google.com</a> を開く</div></div>
+          <div class="guide-row"><div class="guide-key">②</div><div class="guide-val">左側「他のカレンダー」の <strong>＋</strong> をクリック →「URLで追加」を選択</div></div>
+          <div class="guide-row"><div class="guide-key">③</div><div class="guide-val">以下のURLを入力して「カレンダーを追加」をクリック</div></div>
+        </div>
+        <div style="margin-top:8px;background:var(--surface2);border-radius:var(--radius);padding:8px 12px;font-size:11px;font-family:monospace;word-break:break-all;color:var(--blue-800);user-select:all;">https://rrsbyiypwgnwzqadwpky.supabase.co/functions/v1/ical</div>
+        <div style="margin-top:8px;font-size:11px;color:var(--text3);line-height:1.7;">登録後はGoogleカレンダーが自動的に定期取得します。点検スケジュールがカレンダーアプリで確認できます。</div>
+      </div>
+
     </div>
     <div class="modal-foot">
       <button class="btn btn-primary" onclick="closeGuide()">閉じる</button>
