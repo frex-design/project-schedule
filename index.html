@@ -216,7 +216,7 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
   background:var(--blue-800);color:#fff;font-size:10px;font-weight:700;
   letter-spacing:0.04em;height:28px;}
 /* グリッドセル */
-.gantt-td-grid{padding:0;vertical-align:top;border-bottom:0.5px solid var(--border);}
+.gantt-td-grid{padding:0;vertical-align:top;border-bottom:0.5px solid var(--border);position:relative;overflow:visible;}
 .gantt-td-grid.biz-sep{height:28px;background:var(--blue-800);border-bottom:none;}
 /* 後方互換 */
 .gantt-wrap{display:contents;}
@@ -2026,6 +2026,7 @@ function renderGantt(){
       tdGrid.style.width=(total*CW)+'px';
     }
     tr.appendChild(tdGrid);
+    r._tdGrid=tdGrid;  // バー配置用に参照を保存
     gb.appendChild(tr);
   });
 
@@ -2043,14 +2044,12 @@ function renderGantt(){
 }
 
 function renderBars(rows,yms,ymMeta,total){
-  const ym=yms[0];
-  const [y,mo]=ym.split('-').map(Number);
   const bl=document.getElementById('bar-layer');bl.innerHTML='';
 
-  // 今日ライン
+  // 今日ライン（bar-layerに描画）
   const today=new Date();
   let todayOffset=0,foundToday=false;
-  for(const {yr,mo:m,days,ym:curYm} of ymMeta){
+  for(const {yr,mo:m,days} of ymMeta){
     if(today.getFullYear()===yr&&today.getMonth()===m-1){
       todayOffset+=today.getDate()-1;
       foundToday=true;break;
@@ -2059,26 +2058,30 @@ function renderBars(rows,yms,ymMeta,total){
   }
   if(foundToday){
     const tl=document.createElement('div');tl.className='today-line';
-    tl.style.left=(200+(todayOffset+0.5)*CW)+'px';
-    tl.style.top='56px';
-    const tlH=rows.reduce((s,r)=>s+(r.type==='sep'?28:36),0);
-    tl.style.height=tlH+'px';
-    bl.appendChild(tl);
+    // tdGridの先頭からのオフセット
+    const firstBridgeRow=rows.find(r=>r.type!=='sep');
+    if(firstBridgeRow&&firstBridgeRow._tdGrid){
+      const tdG=firstBridgeRow._tdGrid;
+      const outer=document.getElementById('gantt-outer');
+      const tdRect=tdG.getBoundingClientRect();
+      const outerRect=outer.getBoundingClientRect();
+      const tlLeft=tdRect.left-outerRect.left+outer.scrollLeft+(todayOffset+0.5)*CW;
+      const tlTop=tdRect.top-outerRect.top+outer.scrollTop;
+      const tlH=rows.reduce((s,r)=>s+(r.type==='sep'?28:36),0);
+      tl.style.cssText='left:'+tlLeft+'px;top:'+tlTop+'px;height:'+tlH+'px;';
+      bl.appendChild(tl);
+    }
   }
 
-  // 予備日バーを描画（全橋梁行にまたがる縦の帯）
-  // 業務ごとにまとめて処理
+  // 予備日バー（bar-layerに描画）
   const bizReserveMap={};
   rows.forEach((r,ri)=>{
     if(r.type==='sep') return;
     const biz=getBiz(r.bizId);if(!biz)return;
-    if(!bizReserveMap[r.bizId]){
-      bizReserveMap[r.bizId]={biz,firstRi:ri,lastRi:ri};
-    } else {
-      bizReserveMap[r.bizId].lastRi=ri;
-    }
+    if(!bizReserveMap[r.bizId]) bizReserveMap[r.bizId]={biz,firstRi:ri,lastRi:ri,firstRow:r};
+    else bizReserveMap[r.bizId].lastRi=ri;
   });
-  Object.values(bizReserveMap).forEach(({biz,firstRi,lastRi})=>{
+  Object.values(bizReserveMap).forEach(({biz,firstRi,lastRi,firstRow})=>{
     biz.entries.filter(e=>e.reserve===true&&yms.some(ym=>e.date.startsWith(ym))).forEach(e=>{
       const idx=biz.entries.indexOf(e);
       let colOffset=0;
@@ -2086,22 +2089,20 @@ function renderBars(rows,yms,ymMeta,total){
         if(e.date.startsWith(curYm)){colOffset+=parseInt(e.date.split('-')[2])-1;break;}
         colOffset+=days;
       }
-      let topPx=0;
-      for(let i=0;i<firstRi;i++) topPx+=rows[i].type==='sep'?28:36;
+      if(!firstRow._tdGrid) return;
+      const outer=document.getElementById('gantt-outer');
+      const tdRect=firstRow._tdGrid.getBoundingClientRect();
+      const outerRect=outer.getBoundingClientRect();
+      const barLeft=tdRect.left-outerRect.left+outer.scrollLeft+colOffset*CW;
+      const barTop=tdRect.top-outerRect.top+outer.scrollTop;
       let heightPx=0;
       for(let i=firstRi;i<=lastRi;i++) heightPx+=rows[i].type==='sep'?28:36;
       const bar=document.createElement('div');bar.className='gbar-reserve';
-      bar.style.cssText=
-        'left:'+(200+colOffset*CW)+'px;'
-        +'top:'+(56+topPx)+'px;'
-        +'width:'+(CW-2)+'px;'
-        +'height:'+heightPx+'px;';
-      const lbl=document.createElement('span');lbl.className='gbar-reserve-lbl';
-      lbl.textContent='予備日';
+      bar.style.cssText='left:'+barLeft+'px;top:'+barTop+'px;width:'+(CW-2)+'px;height:'+heightPx+'px;';
+      const lbl=document.createElement('span');lbl.className='gbar-reserve-lbl';lbl.textContent='予備日';
       bar.appendChild(lbl);
       bar.addEventListener('click',()=>openEditModal(biz.id,idx));
-      const delBtn=document.createElement('div');delBtn.className='gbar-del';
-      delBtn.textContent='×';
+      const delBtn=document.createElement('div');delBtn.className='gbar-del';delBtn.textContent='×';
       delBtn.addEventListener('click',ev=>{
         ev.stopPropagation();
         if(confirm('予備日を削除しますか？')){biz.entries.splice(idx,1);renderAll();}
@@ -2111,15 +2112,17 @@ function renderBars(rows,yms,ymMeta,total){
     });
   });
 
-  // 全業務のentriesをバーとして描画
+  // 通常バー：各行のtdGridに直接配置
+  // tdGridはposition:relative、バーはposition:absolute
   rows.forEach((r,ri)=>{
     if(r.type==='sep') return;
     const biz=getBiz(r.bizId);if(!biz)return;
-    biz.entries.filter(e=>{
-      return yms.some(ym=>e.date.startsWith(ym))&&e.bridgeIdx===r.bi&&!e.reserve;
-    }).forEach(e=>{
+    if(!r._tdGrid) return;
+    // 既存のバーをクリア
+    r._tdGrid.querySelectorAll('.gbar').forEach(b=>b.remove());
+
+    biz.entries.filter(e=>yms.some(ym=>e.date.startsWith(ym))&&e.bridgeIdx===r.bi&&!e.reserve).forEach(e=>{
       const idx=biz.entries.indexOf(e);
-      // 期間先頭からの列オフセットを計算
       let colOffset=0;
       for(const {ym:curYm,days} of ymMeta){
         if(e.date.startsWith(curYm)){colOffset+=parseInt(e.date.split('-')[2])-1;break;}
@@ -2128,16 +2131,12 @@ function renderBars(rows,yms,ymMeta,total){
       const d=colOffset;
       const dur=Math.max(1,e.durDays||1);
       const p=pal(r.bi>=0?r.bi:0);
-      // 累積top計算：sep=28px, bridge=36px
-      let topPx=0;
-      for(let i=0;i<ri;i++){
-        topPx+=rows[i].type==='sep'?28:36;
-      }
       const barH=26;
       const bar=document.createElement('div');bar.className='gbar';
       bar.style.cssText='background:'+p.bg+';color:'+p.fg+';border:1px solid '+p.bd+';'
-        +'left:'+(200+d*CW)+'px;'
-        +'top:'+(56+topPx+Math.floor((36-barH)/2))+'px;'
+        +'position:absolute;'
+        +'left:'+(d*CW)+'px;'
+        +'top:'+Math.floor((36-barH)/2)+'px;'
         +'width:'+(dur*CW-4)+'px;height:'+barH+'px;';
       bar.dataset.bizId=r.bizId;bar.dataset.idx=idx;bar.dataset.ri=ri;bar.dataset.d=d;bar.dataset.dur=dur;
 
@@ -2154,21 +2153,21 @@ function renderBars(rows,yms,ymMeta,total){
       bar.appendChild(del);
 
       const lh=document.createElement('div');lh.className='gbar-handle L';
-      lh.addEventListener('mousedown',ev=>{ev.stopPropagation();startResize(ev,bar,'L',rows,ym,total);});
+      lh.addEventListener('mousedown',ev=>{ev.stopPropagation();startResize(ev,bar,'L',rows,yms[0],total);});
       bar.appendChild(lh);
       const rh=document.createElement('div');rh.className='gbar-handle R';
-      rh.addEventListener('mousedown',ev=>{ev.stopPropagation();startResize(ev,bar,'R',rows,ym,total);});
+      rh.addEventListener('mousedown',ev=>{ev.stopPropagation();startResize(ev,bar,'R',rows,yms[0],total);});
       bar.appendChild(rh);
 
       bar.addEventListener('mousedown',ev=>{
         if(ev.target.classList.contains('gbar-handle')||ev.target===del)return;
-        startDrag(ev,bar,rows,ym,total);
+        startDrag(ev,bar,rows,yms[0],total);
       });
       bar.addEventListener('click',ev=>{
         if(bar._moved||ev.target.classList.contains('gbar-handle')||ev.target===del)return;
         openEditModal(r.bizId,idx);
       });
-      bl.appendChild(bar);
+      r._tdGrid.appendChild(bar);
     });
   });
 }
