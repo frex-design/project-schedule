@@ -2034,11 +2034,12 @@ function renderGantt(){
   // bar-layerをgantt-tableの子として配置
   // 固定値で配置（CSS定義値と完全一致）
   renderBars(rows,yms,ymMeta,total);
-  // renderBars後にbar-layerの位置を設定
-  bl.style.top='56px';
-  bl.style.left='200px';
-  bl.style.width=(total*CW)+'px';
-  bl.style.height=rows.reduce((s,r)=>s+(r.type==='sep'?28:36),0)+'px';
+  // bar-layerはgantt-outerの左上角(0,0)に固定
+  // バー自体のtop/leftにoffsetを加算済み
+  bl.style.top='0';
+  bl.style.left='0';
+  bl.style.width='100%';
+  bl.style.height='100%';
 }
 
 function renderBars(rows,yms,ymMeta,total){
@@ -2058,7 +2059,8 @@ function renderBars(rows,yms,ymMeta,total){
   }
   if(foundToday){
     const tl=document.createElement('div');tl.className='today-line';
-    tl.style.left=((todayOffset+0.5)*CW)+'px';
+    tl.style.left=(200+(todayOffset+0.5)*CW)+'px';
+    tl.style.top='56px';
     const tlH=rows.reduce((s,r)=>s+(r.type==='sep'?28:36),0);
     tl.style.height=tlH+'px';
     bl.appendChild(tl);
@@ -2090,8 +2092,8 @@ function renderBars(rows,yms,ymMeta,total){
       for(let i=firstRi;i<=lastRi;i++) heightPx+=rows[i].type==='sep'?28:36;
       const bar=document.createElement('div');bar.className='gbar-reserve';
       bar.style.cssText=
-        'left:'+(colOffset*CW)+'px;'
-        +'top:'+topPx+'px;'
+        'left:'+(200+colOffset*CW)+'px;'
+        +'top:'+(56+topPx)+'px;'
         +'width:'+(CW-2)+'px;'
         +'height:'+heightPx+'px;';
       const lbl=document.createElement('span');lbl.className='gbar-reserve-lbl';
@@ -2134,8 +2136,8 @@ function renderBars(rows,yms,ymMeta,total){
       const barH=26;
       const bar=document.createElement('div');bar.className='gbar';
       bar.style.cssText='background:'+p.bg+';color:'+p.fg+';border:1px solid '+p.bd+';'
-        +'left:'+(d*CW)+'px;'
-        +'top:'+(topPx+Math.floor((36-barH)/2))+'px;'
+        +'left:'+(200+d*CW)+'px;'
+        +'top:'+(56+topPx+Math.floor((36-barH)/2))+'px;'
         +'width:'+(dur*CW-4)+'px;height:'+barH+'px;';
       bar.dataset.bizId=r.bizId;bar.dataset.idx=idx;bar.dataset.ri=ri;bar.dataset.d=d;bar.dataset.dur=dur;
 
