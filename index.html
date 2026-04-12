@@ -195,7 +195,7 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
 .gantt-table{border-collapse:collapse;min-width:max-content;}
 /* 左列ヘッダー */
 .gantt-th-name{
-  width:var(--name-w);min-width:var(--name-w);
+  width:var(--name-w);min-width:var(--name-w);box-sizing:border-box;
   background:var(--surface2);border-right:1.5px solid var(--border3);border-bottom:1.5px solid var(--border3);
   font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.05em;
   padding:0 12px;
@@ -2137,9 +2137,9 @@ function renderBars(rows,yms,ymMeta,total){
       const barH=26;
       const bar=document.createElement('div');bar.className='gbar';
       bar.style.cssText='background:'+p.bg+';color:'+p.fg+';border:1px solid '+p.bd+';'
-        +'left:'+(d*CW+1)+'px;'
+        +'left:'+(d*CW)+'px;'
         +'top:'+(topPx+Math.floor((36-barH)/2))+'px;'
-        +'width:'+(dur*CW-6)+'px;height:'+barH+'px;';
+        +'width:'+(dur*CW-4)+'px;height:'+barH+'px;';
       bar.dataset.bizId=r.bizId;bar.dataset.idx=idx;bar.dataset.ri=ri;bar.dataset.d=d;bar.dataset.dur=dur;
 
       const lbl=document.createElement('span');lbl.className='gbar-lbl';
