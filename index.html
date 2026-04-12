@@ -705,7 +705,8 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
 <div id="panel-gantt" class="tab-panel active">
   <div id="gantt-welcome"></div>
   <div class="pad">
-    <div class="gantt-outer" id="gantt-outer">
+    <div class="gantt-outer" id="gantt-outer" style="position:relative;">
+      <div id="bar-layer" style="position:absolute;pointer-events:none;z-index:5;top:0;left:0;"></div>
       <table class="gantt-table" id="gantt-table">
         <thead id="g-head-wrap">
           <tr>
@@ -2032,10 +2033,14 @@ function renderGantt(){
   // バーレイヤーを tbody の上に absolute で重ねる
   // gantt-outer を position:relative にして配置
   // bar-layerをgantt-tableの子として配置
-  const tbl=document.getElementById('gantt-table');
-  tbl.style.position='relative';
-  bl.style.cssText='position:absolute;top:56px;left:200px;pointer-events:none;z-index:5;';
-  if(bl.parentNode!==tbl) tbl.appendChild(bl);
+  // bar-layerをgantt-outerに対して配置
+  // tbodyのoffsetTopでtheadの実際の高さを取得
+  const tbody=document.getElementById('g-body');
+  const nameTh=document.querySelector('.gantt-th-name');
+  const blTop=tbody?tbody.offsetTop:56;
+  const blLeft=nameTh?nameTh.offsetWidth:200;
+  bl.style.top=blTop+'px';
+  bl.style.left=blLeft+'px';
 
   renderBars(rows,yms,ymMeta,total);
 }
