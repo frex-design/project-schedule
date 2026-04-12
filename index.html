@@ -2036,15 +2036,6 @@ function renderGantt(){
   bl.dataset.baseLeft=200;
 
   renderBars(rows,yms,ymMeta,total);
-  // スクロール時にbar-layerのleftを追従させる
-  const outer=document.getElementById('gantt-outer');
-  if(outer&&!outer._blScrollBound){
-    outer._blScrollBound=true;
-    outer.addEventListener('scroll',()=>{
-      const bl2=document.getElementById('bar-layer');
-      if(bl2) bl2.style.left=(200+outer.scrollLeft)+'px';
-    });
-  }
 }
 
 function renderBars(rows,yms,ymMeta,total){
