@@ -2031,7 +2031,13 @@ function renderGantt(){
   // gantt-outer を position:relative にして配置
   const tableEl=document.getElementById('gantt-table');
   tableEl.style.position='relative';
-  bl.style.cssText='position:absolute;top:56px;left:var(--name-w);right:0;bottom:0;pointer-events:none;z-index:5;';
+  // 左列thの実際の幅を取得してbar-layerのleftを正確に設定
+  const nameTh=tableEl.querySelector('.gantt-th-name');
+  const nameW=nameTh?nameTh.getBoundingClientRect().width:parseInt(getComputedStyle(document.documentElement).getPropertyValue('--name-w'))||200;
+  // ヘッダー行の高さも実測
+  const headRow=document.getElementById('g-head-wrap');
+  const headH=headRow?headRow.getBoundingClientRect().height:56;
+  bl.style.cssText='position:absolute;top:'+headH+'px;left:'+nameW+'px;right:0;bottom:0;pointer-events:none;z-index:5;';
   tableEl.appendChild(bl);
 
   renderBars(rows,yms,ymMeta,total);
