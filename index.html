@@ -752,7 +752,7 @@ tbody tr.cont td{border-top:0.5px dashed var(--border2);}
       <div class="grid2">
         <div class="frow"><div class="flbl">誘導員数</div><input type="number" id="m-guide" min="0" placeholder="2"></div>
         <div class="frow"><div class="flbl">規制方法</div>
-          <select id="m-reg"><option>片側交互通行</option><option>全面通行止め</option><option>夜間通行止め</option><option>規制なし</option></select>
+          <select id="m-reg"><option>片側交互通行</option><option>全面通行止め</option><option>夜間交互通行</option><option>夜間通行止め</option><option>規制なし</option></select>
         </div>
       </div>
       <div class="frow" style="font-size:11px;color:var(--text3);background:var(--surface2);border-radius:var(--radius);padding:7px 10px;">
@@ -1497,6 +1497,7 @@ function renderSummary(){
     <div class="sum-card"><div class="sum-label">点検日数</div><div class="sum-val">${(()=>{const ds=new Set();me.filter(e=>!e.reserve).forEach(e=>{const dur=Math.max(1,e.durDays||1);const start=new Date(e.date+'T00:00:00');for(let i=0;i<dur;i++){const d=new Date(start);d.setDate(d.getDate()+i);const ds2=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');if(allYms.has(ds2)) ds.add(d.toISOString().slice(0,10));}});return ds.size;})()}<span class="sum-unit">日</span></div></div>
     <div class="sum-card"><div class="sum-label">点検橋梁数</div><div class="sum-val">${new Set(me.filter(e=>!e.reserve&&e.bridgeIdx>=0).map(e=>e.bridgeIdx)).size}<span class="sum-unit">橋</span></div></div>
     <div class="sum-card"><div class="sum-label">延べ誘導員</div><div class="sum-val">${tg}<span class="sum-unit">名</span></div></div>
+    <div class="sum-card"><div class="sum-label">夜間点検</div><div class="sum-val" style="font-size:16px">${me.filter(e=>!e.reserve&&e.reg==='夜間交互通行').length}<span class="sum-unit" style="font-size:10px">交互</span> <span style="color:var(--apple-gray-3);font-weight:300">/</span> ${me.filter(e=>!e.reserve&&e.reg==='夜間通行止め').length}<span class="sum-unit" style="font-size:10px">通止</span></div></div>
     <div class="sum-card"><div class="sum-label">登録橋梁数</div><div class="sum-val">${biz.bridges.length}<span class="sum-unit">件</span></div></div>
   `;
 }
